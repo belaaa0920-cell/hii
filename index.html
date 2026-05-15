@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>🗺️ 地图旅行指南 | 点击国家 · 在地真心话</title>
+    <!-- Leaflet CSS & JS (开源地图库) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 提供世界地图GeoJSON数据 (用于显示国家和点击交互) -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #2b3b2c;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        /* 主容器：全地图 + 侧边卡片 */
+        .app-wrapper {
+            max-width: 1400px;
+            width: 100%;
+            background: #1e2a21;
+            border-radius: 40px;
+            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.5);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: #1f2e1b;
+            padding: 14px 24px;
+            color: #f9efcf;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-bottom: 1px solid #44633e;
+        }
+        .header h1 {
+            font-size: 1.6rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        .header p {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        .map-and-panel {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        /* 地图区域占70% */
+        .map-container {
+            flex: 2.5;
+            min-width: 280px;
+            height: 550px;
+            background: #303e2b;
+            position: relative;
+            border-right: 1px solid #5b7a53;
+        }
+        #worldMap {
+            height: 100%;
+            width: 100%;
+            background: #cfe3cd;
+        }
+        /* 右侧建议面板 */
+        .suggestions-panel {
+            flex: 1.2;
+            min-width: 280px;
+            background: #fef8ed;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            max-height: 550px;
+        }
+        .panel-header {
+            background: #e9dfcf;
+            padding: 16px 18px;
+            border-bottom: 2px solid #cbbfaa;
+        }
+        .panel-header h3 {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.2rem;
+            color: #2c4b2a;
+        }
+        .selected-country {
+            font-weight: bold;
+            color: #c2562c;
+        }
+        .add-suggestion-btn {
+            background: #508050;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 50px;
+            margin-top: 10px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .add-suggestion-btn:hover {
+            background: #2f6130;
+        }
+        .records-list {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .record-card {
+            background: white;
+            border-radius: 24px;
+            padding: 14px;
+            border-left: 8px solid #90b77d;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .card-category {
+            display: inline-block;
+            background: #eef2e0;
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #456b41;
+        }
+        .card-location {
+            font-size: 0.75rem;
+            color: #977b53;
+            margin: 6px 0 4px;
+        }
+        .quote {
+            font-style: italic;
+            margin: 8px 0;
+            font-size: 0.9rem;
+            color: #2d3529;
+            background: #faf2e2;
+            padding: 8px 10px;
+            border-radius: 16px;
+        }
+        .rating {
+            font-size: 0.7rem;
+            margin: 5px 0;
+        }
+        .record-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+            font-size: 0.65rem;
+            color: #b6a07e;
+        }
+        .delete-record {
+            background: none;
+            border: none;
+            color: #bc7a5a;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: 50px;
+        }
+        .delete-record:hover {
+            background: #ffe1d4;
+        }
+        .empty-tip {
+            text-align: center;
+            padding: 40px 20px;
+            color: #b59d7a;
+            font-size: 0.85rem;
+        }
+        /* 模态框表单 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: #fff8ef;
+            max-width: 450px;
+            width: 90%;
+            border-radius: 48px;
+            padding: 24px 22px;
+            box-shadow: 0 20px 35px rgba(0,0,0,0.3);
+        }
+        .modal-content h3 {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            color: #2e542c;
+        }
+        .modal-content input, .modal-content select, .modal-content textarea {
+            width: 100%;
+            margin-bottom: 16px;
+            padding: 12px;
+            border-radius: 40px;
+            border: 1px solid #ddd0bb;
+            background: #fefaf5;
+        }
+        .modal-content textarea {
+            border-radius: 24px;
+            resize: vertical;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+        .modal-buttons button {
+            padding: 8px 18px;
+            border-radius: 40px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .save-btn {
+            background: #5b8c4e;
+            color: white;
+        }
+        .cancel-btn {
+            background: #ccc2b2;
+        }
+        .leaflet-interactive {
+            cursor: pointer;
+            transition: fill-opacity 0.2s;
+        }
+        .leaflet-interactive:hover {
+            fill-opacity: 0.7;
+            stroke: #ffd966;
+            stroke-width: 1.5;
+        }
+        footer {
+            text-align: center;
+            font-size: 0.7rem;
+            background: #202f1c;
+            color: #98a888;
+            padding: 8px;
+        }
+        @media (max-width: 800px) {
+            .map-and-panel {
+                flex-direction: column;
+            }
+            .map-container {
+                height: 380px;
+                border-right: none;
+                border-bottom: 1px solid #7e9a6e;
+            }
+            .suggestions-panel {
+                max-height: 380px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="app-wrapper">
+    <div class="header">
+        <h1>🗺️ 一句话旅行指南 · 世界地图版</h1>
+        <p>✈️ 点击任意国家 · 查看/留下在地人的真心话</p>
+    </div>
+    <div class="map-and-panel">
+        <div class="map-container">
+            <div id="worldMap"></div>
+        </div>
+        <div class="suggestions-panel" id="suggestionsPanel">
+            <div class="panel-header">
+                <h3>📍 当前地点：<span id="selectedCountryName" class="selected-country">尚未选择国家</span></h3>
+                <button id="openAddBtn" class="add-suggestion-btn" disabled>➕ 为此地添加一条旅行建议</button>
+            </div>
+            <div class="records-list" id="recordsList">
+                <div class="empty-tip">✨ 点击地图上的国家，查看当地旅行真心话</div>
+            </div>
+        </div>
+    </div>
+    <footer>💡 点击国家→贡献或浏览建议 · 数据仅保存在你的浏览器中</footer>
+</div>
+
+<!-- 模态窗表单 -->
+<div id="suggestionModal" class="modal">
+    <div class="modal-content">
+        <h3>📝 给 <span id="modalCountrySpan"></span> 写一句真心话</h3>
+        <textarea id="modalContent" rows="3" placeholder="例：圣托里尼傍晚一定要去伊亚看日落，人少景美" maxlength="240"></textarea>
+        <input type="text" id="modalLocationDetail" placeholder="具体地点 (可选，如：伊亚小镇)" value="">
+        <select id="modalCategory">
+            <option value="景点秘境">🌄 景点秘境</option>
+            <option value="美食探店">🍜 美食探店</option>
+            <option value="避坑指南">⚠️ 避坑指南</option>
+            <option value="冷门技巧">💡 冷门技巧</option>
+            <option value="在地体验">🎭 在地体验</option>
+        </select>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <label>⭐ 推荐指数：</label>
+            <input type="number" id="modalRating" min="1" max="5" value="5" style="width: 80px;">
+            <input type="text" id="modalTag" placeholder="标签 (自由/小众/免费)" style="flex:1;">
+        </div>
+        <div class="modal-buttons">
+            <button class="cancel-btn" id="closeModalBtn">取消</button>
+            <button class="save-btn" id="saveSuggestionBtn">保存指南</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**********************************************************
+     * DATA CONTRACT (数据契约)
+     * 每笔record必须包含:
+     * 1. id:          String (唯一标识)
+     * 2. countryName: String (点击的国家名称，用于聚合)
+     * 3. content:     String (一句话建议主体)
+     * 4. category:    String (分类, 下拉选单)
+     * 5. locationDetail: String (具体地点/城市补充)
+     * 6. rating:      Number (1-5 推荐指数)
+     * 7. tag:         String (可选标签)
+     * 8. createdAt:   Number (时间戳)
+     * 
+     * 功能要求:
+     * - 初始界面为真实地图(Leaflet + GeoJSON世界地图)
+     * - 使用者按下(点击)某个国家位置后，右侧面板显示该国家已有的建议记录
+     * - 同时启用「为此地添加一条旅行建议」按钮，点击弹出写建议画面
+     * - 提交后刷新右侧列表，并存储至localStorage
+     * - 可以看到其他人写的建议资料(基于localStorage共享数据)
+     * - 每条记录可删除
+     * 
+     * 技术要求:
+     * - 单一index.html, 无React/Vue/后端, localStorage key = "travel_records"
+     * - 清楚包含 createRecord, saveData, loadData, updateRecord, renderList 函数
+     * - 所有数据存储读取严格基于localStorage
+     **********************************************************/
+
+    // ---------- 全局变量 ----------
+    let allRecords = [];            // 存储所有记录对象
+    let currentSelectedCountry = null;   // 当前选中的国家名称 (英文or中文名展示)
+    let currentCountryCode = null;       // 额外保留iso代码备用
+    
+    // DOM 元素
+    const recordsListDiv = document.getElementById('recordsList');
+    const selectedCountrySpan = document.getElementById('selectedCountryName');
+    const openAddBtn = document.getElementById('openAddBtn');
+    const modal = document.getElementById('suggestionModal');
+    const modalCountrySpan = document.getElementById('modalCountrySpan');
+    const modalContent = document.getElementById('modalContent');
+    const modalLocationDetail = document.getElementById('modalLocationDetail');
+    const modalCategory = document.getElementById('modalCategory');
+    const modalRating = document.getElementById('modalRating');
+    const modalTag = document.getElementById('modalTag');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const saveSuggestionBtn = document.getElementById('saveSuggestionBtn');
+
+    // 地图相关
+    let map;
+    let geoJsonLayer;
+
+    // ---------- 核心函数 (按要求分离) ----------
+    
+    // 生成唯一ID
+    function generateId() {
+        return 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+    }
+
+    // 创建记录对象
+    function createRecord(formData) {
+        // formData 包含: countryName, content, category, locationDetail, rating, tag
+        return {
+            id: generateId(),
+            countryName: formData.countryName,
+            content: formData.content.trim(),
+            category: formData.category,
+            locationDetail: formData.locationDetail ? formData.locationDetail.trim() : '',
+            rating: Number(formData.rating),
+            tag: formData.tag ? formData.tag.trim() : '',
+            createdAt: Date.now()
+        };
+    }
+
+    // saveData: 保存单条记录到localStorage (合并全量)
+    function saveData(record) {
+        let currentRecords = loadDataFromLS();
+        const existingIndex = currentRecords.findIndex(r => r.id === record.id);
+        if (existingIndex !== -1) {
+            currentRecords[existingIndex] = record;
+        } else {
+            currentRecords.push(record);
+        }
+        localStorage.setItem('travel_records', JSON.stringify(currentRecords));
+        allRecords = [...currentRecords];
+    }
+
+    // 从localStorage加载原始数组
+    function loadDataFromLS() {
+        const stored = localStorage.getItem('travel_records');
+        if (!stored) return [];
+        try {
+            return JSON.parse(stored);
+        } catch(e) {
+            return [];
+        }
+    }
+
+    // loadData: 加载全部数据并刷新全局allRecords (同步内存)
+    function loadData() {
+        allRecords = loadDataFromLS();
+        // 如果有选中国家，重新渲染列表
+        if (currentSelectedCountry) {
+            renderListForCountry(currentSelectedCountry);
+        } else {
+            renderList([]);
+        }
+    }
+
+    // updateRecord (根据id更新记录部分字段)
+    function updateRecord(id, changes) {
+        const index = allRecords.findIndex(r => r.id === id);
+        if (index === -1) return false;
+        const updated = { ...allRecords[index], ...changes, createdAt: allRecords[index].createdAt };
+        allRecords[index] = updated;
+        localStorage.setItem('travel_records', JSON.stringify(allRecords));
+        // 如果当前选中的国家和更新后国家一致则刷新列表
+        if (currentSelectedCountry && updated.countryName === currentSelectedCountry) {
+            renderListForCountry(currentSelectedCountry);
+        } else if (!currentSelectedCountry) {
+            // nothing
+        } else if (currentSelectedCountry && updated.countryName !== currentSelectedCountry) {
+            // 不影响当前列表展示, 但为了数据一致，可保持当前列表不变
+            // 但是以防其他国家的记录改动不影响当前国家视图, 仍然不需要刷新
+        }
+        return true;
+    }
+
+    // 删除记录
+    function deleteRecordById(id) {
+        const recordToDel = allRecords.find(r => r.id === id);
+        if (!recordToDel) return;
+        const newRecords = allRecords.filter(r => r.id !== id);
+        allRecords = newRecords;
+        localStorage.setItem('travel_records', JSON.stringify(allRecords));
+        // 如果删除的记录所属国家正是当前选中的国家，刷新列表
+        if (currentSelectedCountry && recordToDel.countryName === currentSelectedCountry) {
+            renderListForCountry(currentSelectedCountry);
+        }
+    }
+
+    // 根据国家名获取该国家的记录并排序
+    function getRecordsByCountry(countryName) {
+        return allRecords.filter(rec => rec.countryName === countryName)
+                         .sort((a,b) => b.createdAt - a.createdAt);
+    }
+
+    // renderList(recordsToShow) 接受记录数组渲染右侧面板
+    function renderList(recordsToShow) {
+        if (!recordsListDiv) return;
+        if (!recordsToShow || recordsToShow.length === 0) {
+            recordsListDiv.innerHTML = `<div class="empty-tip">✨ 暂无人分享，快成为第一个留下指南的旅行者吧 ✨</div>`;
+            return;
+        }
+        let html = '';
+        for (let rec of recordsToShow) {
+            const safeContent = escapeHtml(rec.content);
+            const safeLocationDetail = escapeHtml(rec.locationDetail || '');
+            const safeTag = rec.tag ? escapeHtml(rec.tag) : '';
+            const ratingStars = '⭐'.repeat(rec.rating) + '☆'.repeat(5 - rec.rating);
+            const dateStr = new Date(rec.createdAt).toLocaleDateString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+            const displayLoc = safeLocationDetail ? `${safeLocationDetail}` : '某处';
+            html += `
+                <div class="record-card" data-id="${rec.id}">
+                    <div><span class="card-category">${escapeHtml(rec.category)}</span></div>
+                    <div class="card-location">📍 ${displayLoc}</div>
+                    <div class="quote">“ ${safeContent} ”</div>
+                    <div class="rating">${ratingStars}</div>
+                    <div class="record-footer">
+                        <span>🏷️ ${safeTag ? '#'+safeTag : '无标签'}</span>
+                        <span>📅 ${dateStr}</span>
+                        <button class="delete-record" data-id="${rec.id}">🗑️ 删除</button>
+                    </div>
+                </div>
+            `;
+        }
+        recordsListDiv.innerHTML = html;
+        // 绑定删除按钮事件
+        document.querySelectorAll('.delete-record').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.getAttribute('data-id');
+                if (confirm('删除这条旅行指南？')) {
+                    deleteRecordById(id);
+                }
+            });
+        });
+    }
+
+    // 根据选中国家渲染
+    function renderListForCountry(countryName) {
+        const recordsForCountry = getRecordsByCountry(countryName);
+        renderList(recordsForCountry);
+    }
+
+    // 辅助转义
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // 当用户点击某个国家时的行为
+    function onCountryClick(countryName) {
+        if (!countryName) return;
+        currentSelectedCountry = countryName;
+        selectedCountrySpan.innerText = countryName;
+        openAddBtn.disabled = false;
+        // 渲染该国家的建议
+        renderListForCountry(countryName);
+    }
+
+    // 打开模态框准备添加建议
+    function openAddSuggestionModal() {
+        if (!currentSelectedCountry) {
+            alert('请先点击地图选择一个国家');
+            return;
+        }
+        modalCountrySpan.innerText = currentSelectedCountry;
+        modalContent.value = '';
+        modalLocationDetail.value = '';
+        modalCategory.value = '景点秘境';
+        modalRating.value = '5';
+        modalTag.value = '';
+        modal.style.display = 'flex';
+    }
+
+    // 保存新建议
+    function saveNewSuggestion() {
+        if (!currentSelectedCountry) {
+            alert('未选中任何国家，请点击地图');
+            modal.style.display = 'none';
+            return;
+        }
+        const content = modalContent.value.trim();
+        if (!content) {
+            alert('请填写一句旅行真心话 ✏️');
+            return;
+        }
+        const formData = {
+            countryName: currentSelectedCountry,
+            content: content,
+            category: modalCategory.value,
+            locationDetail: modalLocationDetail.value.trim(),
+            rating: modalRating.value,
+            tag: modalTag.value.trim()
+        };
+        const newRecord = createRecord(formData);
+        saveData(newRecord);     // 存储至localStorage并更新allRecords
+        // 刷新当前国家的列表
+        renderListForCountry(currentSelectedCountry);
+        modal.style.display = 'none';
+    }
+
+    // ---------- 地图初始化 (Leaflet + GeoJSON世界地图轮廓) ----------
+    async function initMap() {
+        map = L.map('worldMap').setView([20, 0], 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> & CartoDB',
+            subdomains: 'abcd',
+            maxZoom: 6,
+            minZoom: 1.5
+        }).addTo(map);
+        
+        // 加载世界国家GeoJSON (使用开源数据集，提供国名)
+        const geoJsonUrl = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
+        try {
+            const response = await fetch(geoJsonUrl);
+            const data = await response.json();
+            geoJsonLayer = L.geoJSON(data, {
+                style: {
+                    color: '#3c6e3f',
+                    weight: 1.2,
+                    fillColor: '#88b574',
+                    fillOpacity: 0.5
+                },
+                onEachFeature: (feature, layer) => {
+                    // 获取国家名称 (中文优先, 没有则用英文)
+                    let countryName = feature.properties?.ADMIN || feature.properties?.name;
+                    if (!countryName) countryName = feature.properties?.NAME || '未知地区';
+                    // 为了更友好的中文特殊处理一些常见国家英转中 (简单映射)
+                    const nameMap = {
+                        "United States": "美国", "China": "中国", "Japan": "日本", "India": "印度", 
+                        "United Kingdom": "英国", "France": "法国", "Germany": "德国", "Italy": "意大利",
+                        "Spain": "西班牙", "Australia": "澳大利亚", "Canada": "加拿大", "Brazil": "巴西",
+                        "Russia": "俄罗斯", "Mexico": "墨西哥", "Thailand": "泰国", "Vietnam": "越南",
+                        "South Korea": "韩国", "Indonesia": "印度尼西亚", "Turkey": "土耳其", "Egypt": "埃及"
+                    };
+                    if (nameMap[countryName]) countryName = nameMap[countryName];
+                    
+                    layer.on('click', (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        onCountryClick(countryName);
+                        // 增加高亮效果(简单闪一下)
+                        layer.setStyle({ fillOpacity: 0.9, weight: 2, color: '#f5a623' });
+                        setTimeout(() => {
+                            geoJsonLayer.resetStyle(layer);
+                        }, 300);
+                    });
+                    layer.bindTooltip(countryName, { sticky: true, offset: [0, -5] });
+                }
+            }).addTo(map);
+        } catch (err) {
+            console.warn("GeoJSON加载失败，使用备用边界显示", err);
+            // 降级: 显示一个默认提示
+            map.setView([20, 0], 2);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+        }
+    }
+    
+    // ----- 初始化加载数据&事件绑定 ----
+    function bindUIEvents() {
+        openAddBtn.addEventListener('click', openAddSuggestionModal);
+        closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+        saveSuggestionBtn.addEventListener('click', saveNewSuggestion);
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        });
+    }
+
+    // 主入口
+    function init() {
+        loadData();              // 加载localStorage records
+        initMap();              // 初始化地图(异步)
+        bindUIEvents();
+        // 初始无选中，禁用添加按钮
+        openAddBtn.disabled = true;
+        selectedCountrySpan.innerText = '请点击国家';
+        renderList([]);
+    }
+
+    // 挂载辅助函数到window便于调试 (非必须)
+    window.createRecord = createRecord;
+    window.saveData = saveData;
+    window.loadData = loadData;
+    window.updateRecord = updateRecord;
+    window.renderList = renderList;
+    
+    init();
+</script>
+</body>
+</html>

@@ -3,333 +3,57 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>🗺️ 地图旅行指南针 | 世界真心话 · 旅行状态管家</title>
+    <title>🗺️ 地图旅行指南针 · 世界真心话</title>
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
-        }
-        body {
-            background: #2b3b2c;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 16px;
-        }
-        .app-wrapper {
-            max-width: 1400px;
-            width: 100%;
-            background: #1e2a21;
-            border-radius: 40px;
-            box-shadow: 0 25px 45px -12px rgba(0,0,0,0.5);
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        .header {
-            background: #1f2e1b;
-            padding: 14px 24px;
-            color: #f9efcf;
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            flex-wrap: wrap;
-            gap: 10px;
-            border-bottom: 1px solid #44633e;
-        }
-        .header h1 {
-            font-size: 1.6rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-        }
-        .header p {
-            font-size: 0.8rem;
-            opacity: 0.8;
-        }
-        .map-and-panel {
-            display: flex;
-            flex-wrap: wrap;
-        }
-        .map-container {
-            flex: 2.5;
-            min-width: 280px;
-            height: 550px;
-            background: #303e2b;
-            position: relative;
-            border-right: 1px solid #5b7a53;
-        }
-        #worldMap {
-            height: 100%;
-            width: 100%;
-            background: #cfe3cd;
-        }
-        .suggestions-panel {
-            flex: 1.2;
-            min-width: 280px;
-            background: #fef8ed;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            max-height: 550px;
-        }
-        .panel-header {
-            background: #e9dfcf;
-            padding: 16px 18px;
-            border-bottom: 2px solid #cbbfaa;
-        }
-        .panel-header h3 {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1.2rem;
-            color: #2c4b2a;
-        }
-        .selected-country {
-            font-weight: bold;
-            color: #c2562c;
-        }
-        .add-suggestion-btn {
-            background: #508050;
-            color: white;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 50px;
-            margin-top: 10px;
-            font-weight: 600;
-            width: 100%;
-            cursor: pointer;
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .add-suggestion-btn:hover {
-            background: #2f6130;
-        }
-        .status-filter {
-            display: flex;
-            gap: 8px;
-            margin-top: 12px;
-            background: #f4eddf;
-            padding: 6px 12px;
-            border-radius: 40px;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .filter-btn {
-            background: transparent;
-            border: none;
-            padding: 4px 12px;
-            border-radius: 30px;
-            font-size: 0.75rem;
-            cursor: pointer;
-            font-weight: 500;
-            color: #5b4c34;
-            transition: all 0.2s;
-        }
-        .filter-btn.active {
-            background: #508050;
-            color: white;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-        }
-        .records-list {
-            padding: 12px;
-            flex: 1;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .record-card {
-            background: white;
-            border-radius: 24px;
-            padding: 14px;
-            border-left: 8px solid #90b77d;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-            transition: all 0.2s;
-        }
-        .record-card.status-done {
-            opacity: 0.65;
-            background: #f3f0e8;
-            border-left-color: #b0aa90;
-            filter: grayscale(0.05);
-        }
-        .card-category {
-            display: inline-block;
-            background: #eef2e0;
-            padding: 2px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: #456b41;
-        }
-        .card-location {
-            font-size: 0.75rem;
-            color: #977b53;
-            margin: 6px 0 4px;
-        }
-        .quote {
-            font-style: italic;
-            margin: 8px 0;
-            font-size: 0.9rem;
-            color: #2d3529;
-            background: #faf2e2;
-            padding: 8px 10px;
-            border-radius: 16px;
-        }
-        .rating {
-            font-size: 0.7rem;
-            margin: 5px 0;
-        }
-        .record-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-            font-size: 0.65rem;
-            color: #b6a07e;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        .status-badge {
-            font-size: 0.65rem;
-            padding: 2px 8px;
-            border-radius: 30px;
-            background: #e3d9cb;
-            color: #6b5a42;
-        }
-        .status-badge.done {
-            background: #cfcabc;
-            color: #5a4e3a;
-            text-decoration: line-through;
-        }
-        .record-actions {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-        }
-        .toggle-status-btn {
-            background: #e7dfd1;
-            border: none;
-            border-radius: 30px;
-            padding: 4px 10px;
-            font-size: 0.7rem;
-            cursor: pointer;
-            font-weight: 500;
-            color: #4f6b3c;
-        }
-        .delete-record {
-            background: none;
-            border: none;
-            color: #bc7a5a;
-            cursor: pointer;
-            font-size: 0.8rem;
-            padding: 2px 8px;
-            border-radius: 50px;
-        }
-        .delete-record:hover {
-            background: #ffe1d4;
-        }
-        .empty-tip {
-            text-align: center;
-            padding: 40px 20px;
-            color: #b59d7a;
-            font-size: 0.85rem;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
-            align-items: center;
-            justify-content: center;
-            z-index: 2000;
-        }
-        .modal-content {
-            background: #fff8ef;
-            max-width: 450px;
-            width: 90%;
-            border-radius: 48px;
-            padding: 24px 22px;
-            box-shadow: 0 20px 35px rgba(0,0,0,0.3);
-        }
-        .modal-content h3 {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            color: #2e542c;
-        }
-        .modal-content input, .modal-content select, .modal-content textarea {
-            width: 100%;
-            margin-bottom: 16px;
-            padding: 12px;
-            border-radius: 40px;
-            border: 1px solid #ddd0bb;
-            background: #fefaf5;
-        }
-        .modal-content textarea {
-            border-radius: 24px;
-            resize: vertical;
-        }
-        .modal-buttons {
-            display: flex;
-            gap: 12px;
-            justify-content: flex-end;
-        }
-        .modal-buttons button {
-            padding: 8px 18px;
-            border-radius: 40px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .save-btn {
-            background: #5b8c4e;
-            color: white;
-        }
-        .cancel-btn {
-            background: #ccc2b2;
-        }
-        .leaflet-interactive {
-            cursor: pointer;
-            transition: fill-opacity 0.2s;
-        }
-        .leaflet-interactive:hover {
-            fill-opacity: 0.7;
-            stroke: #ffd966;
-            stroke-width: 1.5;
-        }
-        footer {
-            text-align: center;
-            font-size: 0.7rem;
-            background: #202f1c;
-            color: #98a888;
-            padding: 8px;
-        }
-        @media (max-width: 800px) {
-            .map-and-panel {
-                flex-direction: column;
-            }
-            .map-container {
-                height: 380px;
-                border-right: none;
-                border-bottom: 1px solid #7e9a6e;
-            }
-            .suggestions-panel {
-                max-height: 380px;
-            }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif; }
+        body { background: #2b3b2c; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
+        .app-wrapper { max-width: 1400px; width: 100%; background: #1e2a21; border-radius: 40px; box-shadow: 0 25px 45px -12px rgba(0,0,0,0.5); overflow: hidden; display: flex; flex-direction: column; }
+        .header { background: #1f2e1b; padding: 14px 24px; color: #f9efcf; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid #44633e; }
+        .header h1 { font-size: 1.6rem; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+        .header p { font-size: 0.8rem; opacity: 0.8; }
+        .map-and-panel { display: flex; flex-wrap: wrap; }
+        .map-container { flex: 2.5; min-width: 280px; height: 550px; background: #303e2b; position: relative; border-right: 1px solid #5b7a53; }
+        #worldMap { height: 100%; width: 100%; background: #cfe3cd; }
+        .suggestions-panel { flex: 1.2; min-width: 280px; background: #fef8ed; display: flex; flex-direction: column; overflow-y: auto; max-height: 550px; }
+        .panel-header { background: #e9dfcf; padding: 16px 18px; border-bottom: 2px solid #cbbfaa; }
+        .panel-header h3 { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; color: #2c4b2a; }
+        .selected-country { font-weight: bold; color: #c2562c; }
+        .add-suggestion-btn { background: #508050; color: white; border: none; padding: 8px 14px; border-radius: 50px; margin-top: 10px; font-weight: 600; width: 100%; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .add-suggestion-btn:hover { background: #2f6130; }
+        .status-filter { display: flex; gap: 8px; margin-top: 12px; background: #f4eddf; padding: 6px 12px; border-radius: 40px; justify-content: space-between; align-items: center; }
+        .filter-btn { background: transparent; border: none; padding: 4px 12px; border-radius: 30px; font-size: 0.75rem; cursor: pointer; font-weight: 500; color: #5b4c34; transition: all 0.2s; }
+        .filter-btn.active { background: #508050; color: white; box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+        .records-list { padding: 12px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+        .record-card { background: white; border-radius: 24px; padding: 14px; border-left: 8px solid #90b77d; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: all 0.2s; }
+        .record-card.status-done { opacity: 0.65; background: #f3f0e8; border-left-color: #b0aa90; filter: grayscale(0.05); }
+        .card-category { display: inline-block; background: #eef2e0; padding: 2px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; color: #456b41; }
+        .card-location { font-size: 0.75rem; color: #977b53; margin: 6px 0 4px; }
+        .quote { font-style: italic; margin: 8px 0; font-size: 0.9rem; color: #2d3529; background: #faf2e2; padding: 8px 10px; border-radius: 16px; }
+        .rating { font-size: 0.7rem; margin: 5px 0; }
+        .record-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 0.65rem; color: #b6a07e; flex-wrap: wrap; gap: 6px; }
+        .status-badge { font-size: 0.65rem; padding: 2px 8px; border-radius: 30px; background: #e3d9cb; color: #6b5a42; }
+        .status-badge.done { background: #cfcabc; color: #5a4e3a; text-decoration: line-through; }
+        .record-actions { display: flex; gap: 6px; align-items: center; }
+        .toggle-status-btn { background: #e7dfd1; border: none; border-radius: 30px; padding: 4px 10px; font-size: 0.7rem; cursor: pointer; font-weight: 500; color: #4f6b3c; }
+        .delete-record { background: none; border: none; color: #bc7a5a; cursor: pointer; font-size: 0.8rem; padding: 2px 8px; border-radius: 50px; }
+        .delete-record:hover { background: #ffe1d4; }
+        .empty-tip { text-align: center; padding: 40px 20px; color: #b59d7a; font-size: 0.85rem; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 2000; }
+        .modal-content { background: #fff8ef; max-width: 450px; width: 90%; border-radius: 48px; padding: 24px 22px; box-shadow: 0 20px 35px rgba(0,0,0,0.3); }
+        .modal-content h3 { margin-bottom: 20px; display: flex; gap: 8px; align-items: center; color: #2e542c; }
+        .modal-content input, .modal-content select, .modal-content textarea { width: 100%; margin-bottom: 16px; padding: 12px; border-radius: 40px; border: 1px solid #ddd0bb; background: #fefaf5; }
+        .modal-content textarea { border-radius: 24px; resize: vertical; }
+        .modal-buttons { display: flex; gap: 12px; justify-content: flex-end; }
+        .modal-buttons button { padding: 8px 18px; border-radius: 40px; border: none; font-weight: bold; cursor: pointer; }
+        .save-btn { background: #5b8c4e; color: white; }
+        .cancel-btn { background: #ccc2b2; }
+        .leaflet-interactive { cursor: pointer; transition: fill-opacity 0.2s; }
+        .leaflet-interactive:hover { fill-opacity: 0.7; stroke: #ffd966; stroke-width: 1.5; }
+        footer { text-align: center; font-size: 0.7rem; background: #202f1c; color: #98a888; padding: 8px; }
+        @media (max-width: 800px) { .map-and-panel { flex-direction: column; } .map-container { height: 380px; border-right: none; border-bottom: 1px solid #7e9a6e; } .suggestions-panel { max-height: 380px; } }
     </style>
 </head>
 <body>
@@ -358,7 +82,7 @@
             </div>
         </div>
     </div>
-    <footer>💡 标记「已完成」代表你体验过该建议 · 数据仅存在浏览器中(localStorage)</footer>
+    <footer>💡 标记「已完成」代表你体验过该建议 · 数据优先从 Google Sheet 加载</footer>
 </div>
 
 <!-- 模态窗表单 -->
@@ -387,32 +111,14 @@
 </div>
 
 <script>
-    /**********************************************************
-     * DATA CONTRACT (扩展status)
-     * 每笔record必须包含:
-     * 1. id:          String (唯一标识)
-     * 2. countryName: String (点击的国家名称)
-     * 3. content:     String (旅行建议)
-     * 4. category:    String (分类)
-     * 5. locationDetail: String (具体地点)
-     * 6. rating:      Number (1-5)
-     * 7. tag:         String (自定义标签)
-     * 8. createdAt:   Number (时间戳)
-     * 9. status:      String ('active' 默认 / 'done' 表示已完成/失效)
-     * 
-     * 功能扩展:
-     * - 支持状态切换 (active ↔ done)
-     * - 右侧筛选器: 全部 / active(想去) / done(去过)
-     * - 所有数据依然localStorage持久化，key = "travel_records"
-     * - 保留所有原有核心函数: createRecord, saveData, loadData, updateRecord, renderList
-     **********************************************************/
+    // ========== 後端連線設定 ==========
+    const APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
 
-    // ---------- 全局变量 ----------
-    let allRecords = [];                 // 所有记录 (内存)
-    let currentSelectedCountry = null;  // 当前选中国家名称
-    let currentFilter = 'all';          // 'all', 'active', 'done'
+    // ========== 全域變數 ==========
+    let allRecords = [];
+    let currentSelectedCountry = null;
+    let currentFilter = 'all';
 
-    // DOM 元素
     const recordsListDiv = document.getElementById('recordsList');
     const selectedCountrySpan = document.getElementById('selectedCountryName');
     const openAddBtn = document.getElementById('openAddBtn');
@@ -426,54 +132,24 @@
     const closeModalBtn = document.getElementById('closeModalBtn');
     const saveSuggestionBtn = document.getElementById('saveSuggestionBtn');
 
-    // 地图相关
     let map;
     let geoJsonLayer;
 
-    // ---------- 辅助函数 ----------
-    function generateId() {
-        return 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
-    }
+    // ========== 輔助函數 ==========
+    function generateId() { return 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8); }
+    function loadDataFromLS() { const stored = localStorage.getItem('travel_records'); if (!stored) return []; try { return JSON.parse(stored); } catch(e) { return []; } }
 
-    // 从localStorage加载原始数组
-    function loadDataFromLS() {
-        const stored = localStorage.getItem('travel_records');
-        if (!stored) return [];
-        try {
-            return JSON.parse(stored);
-        } catch(e) {
-            return [];
-        }
-    }
-
-    // loadData: 加载全部数据并刷新全局allRecords
     function loadData() {
         allRecords = loadDataFromLS();
-        // 确保旧记录有status字段 (兼容升级)
         let needUpdate = false;
-        allRecords = allRecords.map(rec => {
-            if (!rec.status) {
-                needUpdate = true;
-                return { ...rec, status: 'active' };
-            }
-            return rec;
-        });
-        if (needUpdate) {
-            localStorage.setItem('travel_records', JSON.stringify(allRecords));
-        }
-        if (currentSelectedCountry) {
-            renderListForCountryWithFilter(currentSelectedCountry);
-        } else {
-            renderList([]);
-        }
+        allRecords = allRecords.map(rec => { if (!rec.status) { needUpdate = true; return { ...rec, status: 'active' }; } return rec; });
+        if (needUpdate) localStorage.setItem('travel_records', JSON.stringify(allRecords));
+        if (currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
+        else renderList([]);
     }
 
-    // 保存全量数据到localStorage (内部使用)
-    function persistAllRecords() {
-        localStorage.setItem('travel_records', JSON.stringify(allRecords));
-    }
+    function persistAllRecords() { localStorage.setItem('travel_records', JSON.stringify(allRecords)); }
 
-    // saveData: 保存单条记录 (新增或更新)
     function saveData(record) {
         const existingIndex = allRecords.findIndex(r => r.id === record.id);
         if (existingIndex !== -1) {
@@ -482,45 +158,46 @@
             allRecords.push(record);
         }
         persistAllRecords();
-        // 若当前有选中国家且记录国家匹配，刷新列表
+        
+        // 同步到 Google Sheet (非阻塞，失败不影响本地保存)
+        syncToSheet({ action: "create", record: record }).catch(err => console.warn("Sheet sync failed (create):", err));
+        
+        // 确保列表刷新
         if (currentSelectedCountry && record.countryName === currentSelectedCountry) {
             renderListForCountryWithFilter(currentSelectedCountry);
-        } else if (currentSelectedCountry && existingIndex === -1) {
-            // 新增记录且国家匹配时刷新
-            if (record.countryName === currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
         }
     }
 
-    // createRecord: 根据表单数据构建新对象，包含默认 status = 'active'
     function createRecord(formData) {
         return {
-            id: generateId(),
-            countryName: formData.countryName,
+            id: generateId(), 
+            countryName: formData.countryName, 
             content: formData.content.trim(),
-            category: formData.category,
+            category: formData.category, 
             locationDetail: formData.locationDetail ? formData.locationDetail.trim() : '',
-            rating: Number(formData.rating),
+            rating: Number(formData.rating), 
             tag: formData.tag ? formData.tag.trim() : '',
-            createdAt: Date.now(),
-            status: 'active'     // 新增记录默认为 active
+            createdAt: Date.now(), 
+            status: 'active'
         };
     }
 
-    // updateRecord: 根据id更新部分字段 (例如切换status)
     function updateRecord(id, changes) {
         const index = allRecords.findIndex(r => r.id === id);
         if (index === -1) return false;
         const updated = { ...allRecords[index], ...changes };
         allRecords[index] = updated;
         persistAllRecords();
-        // 如果当前选中国家与更新记录国家相同，刷新视图
+        
+        // 同步更新到 Google Sheet (非阻塞)
+        syncToSheet({ action: "update", id: id, changes: changes }).catch(err => console.warn("Sheet sync failed (update):", err));
+        
         if (currentSelectedCountry && updated.countryName === currentSelectedCountry) {
             renderListForCountryWithFilter(currentSelectedCountry);
         }
         return true;
     }
 
-    // 删除记录
     function deleteRecordById(id) {
         const recordToDel = allRecords.find(r => r.id === id);
         if (!recordToDel) return;
@@ -531,18 +208,13 @@
         }
     }
 
-    // 根据国家和当前筛选器获取要显示的记录
     function getFilteredRecordsByCountry(countryName) {
         let records = allRecords.filter(rec => rec.countryName === countryName);
-        if (currentFilter === 'active') {
-            records = records.filter(rec => rec.status === 'active');
-        } else if (currentFilter === 'done') {
-            records = records.filter(rec => rec.status === 'done');
-        }
+        if (currentFilter === 'active') records = records.filter(rec => rec.status === 'active');
+        else if (currentFilter === 'done') records = records.filter(rec => rec.status === 'done');
         return records.sort((a,b) => b.createdAt - a.createdAt);
     }
 
-    // renderList: 纯渲染函数，接收recordsToShow数组
     function renderList(recordsToShow) {
         if (!recordsListDiv) return;
         if (!recordsToShow || recordsToShow.length === 0) {
@@ -565,7 +237,6 @@
             const displayLoc = safeLocationDetail ? `${safeLocationDetail}` : '某处';
             const statusText = isDone ? '✅ 已完成' : '✨ 想去';
             const toggleLabel = isDone ? '🔄 标记为想去' : '✔️ 标记去过';
-            
             html += `
                 <div class="record-card ${cardDoneClass}" data-id="${rec.id}">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -583,12 +254,9 @@
                             <button class="delete-record" data-id="${rec.id}">🗑️ 删除</button>
                         </div>
                     </div>
-                </div>
-            `;
+                </div>`;
         }
         recordsListDiv.innerHTML = html;
-        
-        // 绑定状态切换事件
         document.querySelectorAll('.toggle-status-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -596,61 +264,38 @@
                 const currentStatus = btn.getAttribute('data-status');
                 const newStatus = currentStatus === 'active' ? 'done' : 'active';
                 updateRecord(id, { status: newStatus });
-                // 刷新当前国家的列表 (保持筛选)
-                if (currentSelectedCountry) {
-                    renderListForCountryWithFilter(currentSelectedCountry);
-                }
+                if (currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
             });
         });
-        
-        // 绑定删除事件
         document.querySelectorAll('.delete-record').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const id = btn.getAttribute('data-id');
-                if (confirm('删除这条旅行指南？')) {
-                    deleteRecordById(id);
-                }
+                if (confirm('删除这条旅行指南？')) deleteRecordById(id);
             });
         });
     }
-    
-    // 根据国家+当前筛选器渲染
+
     function renderListForCountryWithFilter(countryName) {
         const filteredRecords = getFilteredRecordsByCountry(countryName);
         renderList(filteredRecords);
     }
-    
-    // 改变筛选器时调用，刷新当前国家视图
+
     function setFilter(filter) {
         currentFilter = filter;
-        // UI 高亮按钮
         document.querySelectorAll('.filter-btn').forEach(btn => {
-            if (btn.getAttribute('data-filter') === filter) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
+            if (btn.getAttribute('data-filter') === filter) btn.classList.add('active');
+            else btn.classList.remove('active');
         });
-        if (currentSelectedCountry) {
-            renderListForCountryWithFilter(currentSelectedCountry);
-        } else {
-            renderList([]);
-        }
+        if (currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
+        else renderList([]);
     }
 
-    // 辅助转义
     function escapeHtml(str) {
         if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
+        return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; });
     }
 
-    // 点击国家的处理
     function onCountryClick(countryName) {
         if (!countryName) return;
         currentSelectedCountry = countryName;
@@ -658,13 +303,9 @@
         openAddBtn.disabled = false;
         renderListForCountryWithFilter(countryName);
     }
-    
-    // 打开新增模态窗
+
     function openAddSuggestionModal() {
-        if (!currentSelectedCountry) {
-            alert('请先点击地图选择一个国家');
-            return;
-        }
+        if (!currentSelectedCountry) { alert('请先点击地图选择一个国家'); return; }
         modalCountrySpan.innerText = currentSelectedCountry;
         modalContent.value = '';
         modalLocationDetail.value = '';
@@ -673,119 +314,157 @@
         modalTag.value = '';
         modal.style.display = 'flex';
     }
-    
-    // 保存新建议
+
     function saveNewSuggestion() {
-        if (!currentSelectedCountry) {
-            alert('未选中任何国家，请点击地图');
-            modal.style.display = 'none';
-            return;
+        if (!currentSelectedCountry) { 
+            alert('未选中任何国家，请点击地图'); 
+            modal.style.display = 'none'; 
+            return; 
         }
+        
         const content = modalContent.value.trim();
-        if (!content) {
-            alert('请填写一句旅行真心话 ✏️');
+        if (!content) { 
+            alert('请填写一句旅行真心话 ✏️'); 
+            return; 
+        }
+        
+        // 验证评分范围
+        const rating = parseInt(modalRating.value);
+        if (isNaN(rating) || rating < 1 || rating > 5) {
+            alert('推荐指数必须在 1 到 5 之间 ⭐');
             return;
         }
+        
         const formData = {
-            countryName: currentSelectedCountry,
-            content: content,
+            countryName: currentSelectedCountry, 
+            content: content, 
             category: modalCategory.value,
-            locationDetail: modalLocationDetail.value.trim(),
-            rating: modalRating.value,
+            locationDetail: modalLocationDetail.value.trim(), 
+            rating: rating, 
             tag: modalTag.value.trim()
         };
+        
         const newRecord = createRecord(formData);
-        saveData(newRecord);     // 存储并自动刷新当前国家列表 (根据筛选)
+        saveData(newRecord);
         modal.style.display = 'none';
-        // 确保重新渲染（saveData 内已经根据条件刷新，但为了安全再次调用）
-        if (currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
+        
+        // 确保列表刷新
+        if (currentSelectedCountry) {
+            renderListForCountryWithFilter(currentSelectedCountry);
+        }
     }
-    
-    // ---------- 地图初始化 (Leaflet + GeoJSON) ----------
+
+    // ========== Google Sheet 連線函數 ==========
+    async function syncToSheet(payload) {
+        try {
+            const res = await fetch(APPS_SCRIPT_URL, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (!data.ok) throw new Error(data.error || "Sheet sync error");
+            return data;
+        } catch (err) {
+            console.warn("Sheet sync failed:", err);
+            // 不抛出错误，允许离线使用
+            return { ok: false, error: err.message };
+        }
+    }
+
+    async function fetchRecordsFromSheet() {
+        const res = await fetch(APPS_SCRIPT_URL);
+        if (!res.ok) throw new Error("HTTP error " + res.status);
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "Sheet fetch error");
+        return data.records || [];
+    }
+
+    function normalizeRecord(record) {
+        return {
+            id: record["ID"] || record["id"] || "",
+            countryName: record["国家"] || record["countryName"] || "",
+            content: record["旅行建议"] || record["content"] || "",
+            category: record["分类"] || record["category"] || "",
+            locationDetail: record["具体地点"] || record["locationDetail"] || "",
+            rating: Number(record["推荐指数 (1-5)"] ?? record["rating"] ?? 5),
+            tag: record["标签"] || record["tag"] || "",
+            createdAt: Number(record["创建时间"] ?? record["createdAt"] ?? Date.now()),
+            status: record["状态 (active/done)"] || record["status"] || "active"
+        };
+    }
+
+    // ========== 地圖初始化 ==========
     async function initMap() {
         map = L.map('worldMap').setView([20, 0], 2);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> & CartoDB',
-            subdomains: 'abcd',
-            maxZoom: 6,
-            minZoom: 1.5
+            subdomains: 'abcd', maxZoom: 6, minZoom: 1.5
         }).addTo(map);
-        
         const geoJsonUrl = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
         try {
             const response = await fetch(geoJsonUrl);
             const data = await response.json();
             geoJsonLayer = L.geoJSON(data, {
-                style: {
-                    color: '#3c6e3f',
-                    weight: 1.2,
-                    fillColor: '#88b574',
-                    fillOpacity: 0.5
-                },
+                style: { color: '#3c6e3f', weight: 1.2, fillColor: '#88b574', fillOpacity: 0.5 },
                 onEachFeature: (feature, layer) => {
                     let countryName = feature.properties?.ADMIN || feature.properties?.name;
                     if (!countryName) countryName = feature.properties?.NAME || '未知地区';
-                    const nameMap = {
-                        "United States": "美国", "China": "中国", "Japan": "日本", "India": "印度", 
-                        "United Kingdom": "英国", "France": "法国", "Germany": "德国", "Italy": "意大利",
-                        "Spain": "西班牙", "Australia": "澳大利亚", "Canada": "加拿大", "Brazil": "巴西",
-                        "Russia": "俄罗斯", "Mexico": "墨西哥", "Thailand": "泰国", "Vietnam": "越南",
-                        "South Korea": "韩国", "Indonesia": "印度尼西亚", "Turkey": "土耳其", "Egypt": "埃及"
-                    };
+                    const nameMap = { "United States":"美国","China":"中国","Japan":"日本","India":"印度","United Kingdom":"英国","France":"法国","Germany":"德国","Italy":"意大利","Spain":"西班牙","Australia":"澳大利亚","Canada":"加拿大","Brazil":"巴西","Russia":"俄罗斯","Mexico":"墨西哥","Thailand":"泰国","Vietnam":"越南","South Korea":"韩国","Indonesia":"印度尼西亚","Turkey":"土耳其","Egypt":"埃及" };
                     if (nameMap[countryName]) countryName = nameMap[countryName];
-                    
-                    layer.on('click', (e) => {
-                        L.DomEvent.stopPropagation(e);
-                        onCountryClick(countryName);
-                        layer.setStyle({ fillOpacity: 0.9, weight: 2, color: '#f5a623' });
-                        setTimeout(() => {
-                            geoJsonLayer.resetStyle(layer);
-                        }, 300);
-                    });
+                    layer.on('click', (e) => { L.DomEvent.stopPropagation(e); onCountryClick(countryName); layer.setStyle({ fillOpacity: 0.9, weight: 2, color: '#f5a623' }); setTimeout(() => geoJsonLayer.resetStyle(layer), 300); });
                     layer.bindTooltip(countryName, { sticky: true, offset: [0, -5] });
                 }
             }).addTo(map);
-        } catch (err) {
-            console.warn("GeoJSON加载失败，使用基础底图", err);
-            map.setView([20, 0], 2);
-        }
+        } catch (err) { console.warn("GeoJSON加载失败，使用基础底图", err); map.setView([20, 0], 2); }
     }
-    
-    // 绑定UI事件 + 筛选器
+
     function bindUIEvents() {
         openAddBtn.addEventListener('click', openAddSuggestionModal);
         closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
         saveSuggestionBtn.addEventListener('click', saveNewSuggestion);
-        window.addEventListener('click', (e) => {
-            if (e.target === modal) modal.style.display = 'none';
-        });
-        // 筛选按钮事件
+        window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
         document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const filterValue = btn.getAttribute('data-filter');
-                if (filterValue) setFilter(filterValue);
-            });
+            btn.addEventListener('click', (e) => { const filterValue = btn.getAttribute('data-filter'); if (filterValue) setFilter(filterValue); });
         });
     }
-    
-    // 主入口
-    function init() {
-        loadData();              // 加载localStorage，兼容status升级
+
+    // ========== 主入口 ==========
+    async function init() {
+        // 優先從 Google Sheet 加載資料
+        let loadedFromSheet = false;
+        try {
+            const rawRecords = await fetchRecordsFromSheet();
+            if (rawRecords && rawRecords.length > 0) {
+                allRecords = rawRecords.map(normalizeRecord);
+                // 確保每個 record 都有 status 欄位
+                allRecords = allRecords.map(rec => { if (!rec.status) rec.status = 'active'; return rec; });
+                persistAllRecords(); // 同步到 localStorage 作為離線備份
+                loadedFromSheet = true;
+                console.log("从 Google Sheet 加载了 " + allRecords.length + " 条记录");
+            }
+        } catch (err) {
+            console.warn("无法从 Google Sheet 加载，fallback 到 localStorage:", err);
+        }
+        if (!loadedFromSheet) {
+            loadData(); // fallback 到 localStorage
+            console.log("从 localStorage 加载记录");
+        }
         initMap();
         bindUIEvents();
         openAddBtn.disabled = true;
         selectedCountrySpan.innerText = '请点击国家';
-        setFilter('all');       // 默认全部显示
+        setFilter('all');
         renderList([]);
     }
-    
-    // 挂载函数便于调试
+
+    // 掛載函數便於調試
     window.createRecord = createRecord;
     window.saveData = saveData;
     window.loadData = loadData;
     window.updateRecord = updateRecord;
     window.renderList = renderList;
-    
+
     init();
 </script>
 </body>

@@ -82,7 +82,7 @@
             </div>
         </div>
     </div>
-    <footer>💡 标记「已完成」代表你体验过该建议 · 数据优先从 Google Sheet 加载</footer>
+    <footer>💡 标记「已完成」代表你体验过该建议 · 数据仅存在浏览器中(localStorage)</footer>
 </div>
 
 <!-- 模态窗表单 -->
@@ -111,14 +111,35 @@
 </div>
 
 <script>
+    /**********************************************************
+     * DATA CONTRACT (扩展status)
+     * 每笔record必须包含:
+     * 1. id:          String (唯一标识)
+     * 2. countryName: String (点击的国家名称)
+     * 3. content:     String (旅行建议)
+     * 4. category:    String (分类)
+     * 5. locationDetail: String (具体地点)
+     * 6. rating:      Number (1-5)
+     * 7. tag:         String (自定义标签)
+     * 8. createdAt:   Number (时间戳)
+     * 9. status:      String ('active' 默认 / 'done' 表示已完成/失效)
+     * 
+     * 功能扩展:
+     * - 支持状态切换 (active ↔ done)
+     * - 右侧筛选器: 全部 / active(想去) / done(去过)
+     * - 所有数据依然localStorage持久化，key = "travel_records"
+     * - 保留所有原有核心函数: createRecord, saveData, loadData, updateRecord, renderList
+     **********************************************************/
+
     // ========== 後端連線設定 ==========
-    const APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzaOrELrLrIlQRUHiB8xmKGVvezo65uY6WulQ8XXOr34n1RYhjU73vbr80tz1dMqon9/exec";
 
-    // ========== 全域變數 ==========
-    let allRecords = [];
-    let currentSelectedCountry = null;
-    let currentFilter = 'all';
+    // ---------- 全局变量 ----------
+    let allRecords = [];                 // 所有记录 (内存)
+    let currentSelectedCountry = null;  // 当前选中国家名称
+    let currentFilter = 'all';          // 'all', 'active', 'done'
 
+    // DOM 元素
     const recordsListDiv = document.getElementById('recordsList');
     const selectedCountrySpan = document.getElementById('selectedCountryName');
     const openAddBtn = document.getElementById('openAddBtn');
@@ -132,229 +153,11 @@
     const closeModalBtn = document.getElementById('closeModalBtn');
     const saveSuggestionBtn = document.getElementById('saveSuggestionBtn');
 
+    // 地图相关
     let map;
     let geoJsonLayer;
 
-    // ========== 輔助函數 ==========
-    function generateId() { return 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8); }
-    function loadDataFromLS() { const stored = localStorage.getItem('travel_records'); if (!stored) return []; try { return JSON.parse(stored); } catch(e) { return []; } }
-
-    function loadData() {
-        allRecords = loadDataFromLS();
-        let needUpdate = false;
-        allRecords = allRecords.map(rec => { if (!rec.status) { needUpdate = true; return { ...rec, status: 'active' }; } return rec; });
-        if (needUpdate) localStorage.setItem('travel_records', JSON.stringify(allRecords));
-        if (currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
-        else renderList([]);
-    }
-
-    function persistAllRecords() { localStorage.setItem('travel_records', JSON.stringify(allRecords)); }
-
-    function saveData(record) {
-        const existingIndex = allRecords.findIndex(r => r.id === record.id);
-        if (existingIndex !== -1) {
-            allRecords[existingIndex] = record;
-        } else {
-            allRecords.push(record);
-        }
-        persistAllRecords();
-        
-        // 同步到 Google Sheet (非阻塞，失败不影响本地保存)
-        syncToSheet({ action: "create", record: record }).catch(err => console.warn("Sheet sync failed (create):", err));
-        
-        // 确保列表刷新
-        if (currentSelectedCountry && record.countryName === currentSelectedCountry) {
-            renderListForCountryWithFilter(currentSelectedCountry);
-        }
-    }
-
-    function createRecord(formData) {
-        return {
-            id: generateId(), 
-            countryName: formData.countryName, 
-            content: formData.content.trim(),
-            category: formData.category, 
-            locationDetail: formData.locationDetail ? formData.locationDetail.trim() : '',
-            rating: Number(formData.rating), 
-            tag: formData.tag ? formData.tag.trim() : '',
-            createdAt: Date.now(), 
-            status: 'active'
-        };
-    }
-
-    function updateRecord(id, changes) {
-        const index = allRecords.findIndex(r => r.id === id);
-        if (index === -1) return false;
-        const updated = { ...allRecords[index], ...changes };
-        allRecords[index] = updated;
-        persistAllRecords();
-        
-        // 同步更新到 Google Sheet (非阻塞)
-        syncToSheet({ action: "update", id: id, changes: changes }).catch(err => console.warn("Sheet sync failed (update):", err));
-        
-        if (currentSelectedCountry && updated.countryName === currentSelectedCountry) {
-            renderListForCountryWithFilter(currentSelectedCountry);
-        }
-        return true;
-    }
-
-    function deleteRecordById(id) {
-        const recordToDel = allRecords.find(r => r.id === id);
-        if (!recordToDel) return;
-        allRecords = allRecords.filter(r => r.id !== id);
-        persistAllRecords();
-        if (currentSelectedCountry && recordToDel.countryName === currentSelectedCountry) {
-            renderListForCountryWithFilter(currentSelectedCountry);
-        }
-    }
-
-    function getFilteredRecordsByCountry(countryName) {
-        let records = allRecords.filter(rec => rec.countryName === countryName);
-        if (currentFilter === 'active') records = records.filter(rec => rec.status === 'active');
-        else if (currentFilter === 'done') records = records.filter(rec => rec.status === 'done');
-        return records.sort((a,b) => b.createdAt - a.createdAt);
-    }
-
-    function renderList(recordsToShow) {
-        if (!recordsListDiv) return;
-        if (!recordsToShow || recordsToShow.length === 0) {
-            let message = '';
-            if (currentFilter === 'active') message = '✨ 没有「想去」的指南，点击添加吧 ✨';
-            else if (currentFilter === 'done') message = '✅ 暂无「去过」标记的指南，试试切换状态～';
-            else message = '✨ 暂无人分享，快成为第一个留下指南的旅行者吧 ✨';
-            recordsListDiv.innerHTML = `<div class="empty-tip">${message}</div>`;
-            return;
-        }
-        let html = '';
-        for (let rec of recordsToShow) {
-            const isDone = rec.status === 'done';
-            const cardDoneClass = isDone ? 'status-done' : '';
-            const safeContent = escapeHtml(rec.content);
-            const safeLocationDetail = escapeHtml(rec.locationDetail || '');
-            const safeTag = rec.tag ? escapeHtml(rec.tag) : '';
-            const ratingStars = '⭐'.repeat(rec.rating) + '☆'.repeat(5 - rec.rating);
-            const dateStr = new Date(rec.createdAt).toLocaleDateString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
-            const displayLoc = safeLocationDetail ? `${safeLocationDetail}` : '某处';
-            const statusText = isDone ? '✅ 已完成' : '✨ 想去';
-            const toggleLabel = isDone ? '🔄 标记为想去' : '✔️ 标记去过';
-            html += `
-                <div class="record-card ${cardDoneClass}" data-id="${rec.id}">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="card-category">${escapeHtml(rec.category)}</span>
-                        <span class="status-badge ${isDone ? 'done' : ''}">${statusText}</span>
-                    </div>
-                    <div class="card-location">📍 ${displayLoc}</div>
-                    <div class="quote">“ ${safeContent} ”</div>
-                    <div class="rating">${ratingStars}</div>
-                    <div class="record-footer">
-                        <span>🏷️ ${safeTag ? '#'+safeTag : '无标签'}</span>
-                        <span>📅 ${dateStr}</span>
-                        <div class="record-actions">
-                            <button class="toggle-status-btn" data-id="${rec.id}" data-status="${rec.status}">${toggleLabel}</button>
-                            <button class="delete-record" data-id="${rec.id}">🗑️ 删除</button>
-                        </div>
-                    </div>
-                </div>`;
-        }
-        recordsListDiv.innerHTML = html;
-        document.querySelectorAll('.toggle-status-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = btn.getAttribute('data-id');
-                const currentStatus = btn.getAttribute('data-status');
-                const newStatus = currentStatus === 'active' ? 'done' : 'active';
-                updateRecord(id, { status: newStatus });
-                if (currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
-            });
-        });
-        document.querySelectorAll('.delete-record').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = btn.getAttribute('data-id');
-                if (confirm('删除这条旅行指南？')) deleteRecordById(id);
-            });
-        });
-    }
-
-    function renderListForCountryWithFilter(countryName) {
-        const filteredRecords = getFilteredRecordsByCountry(countryName);
-        renderList(filteredRecords);
-    }
-
-    function setFilter(filter) {
-        currentFilter = filter;
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            if (btn.getAttribute('data-filter') === filter) btn.classList.add('active');
-            else btn.classList.remove('active');
-        });
-        if (currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
-        else renderList([]);
-    }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; });
-    }
-
-    function onCountryClick(countryName) {
-        if (!countryName) return;
-        currentSelectedCountry = countryName;
-        selectedCountrySpan.innerText = countryName;
-        openAddBtn.disabled = false;
-        renderListForCountryWithFilter(countryName);
-    }
-
-    function openAddSuggestionModal() {
-        if (!currentSelectedCountry) { alert('请先点击地图选择一个国家'); return; }
-        modalCountrySpan.innerText = currentSelectedCountry;
-        modalContent.value = '';
-        modalLocationDetail.value = '';
-        modalCategory.value = '景点秘境';
-        modalRating.value = '5';
-        modalTag.value = '';
-        modal.style.display = 'flex';
-    }
-
-    function saveNewSuggestion() {
-        if (!currentSelectedCountry) { 
-            alert('未选中任何国家，请点击地图'); 
-            modal.style.display = 'none'; 
-            return; 
-        }
-        
-        const content = modalContent.value.trim();
-        if (!content) { 
-            alert('请填写一句旅行真心话 ✏️'); 
-            return; 
-        }
-        
-        // 验证评分范围
-        const rating = parseInt(modalRating.value);
-        if (isNaN(rating) || rating < 1 || rating > 5) {
-            alert('推荐指数必须在 1 到 5 之间 ⭐');
-            return;
-        }
-        
-        const formData = {
-            countryName: currentSelectedCountry, 
-            content: content, 
-            category: modalCategory.value,
-            locationDetail: modalLocationDetail.value.trim(), 
-            rating: rating, 
-            tag: modalTag.value.trim()
-        };
-        
-        const newRecord = createRecord(formData);
-        saveData(newRecord);
-        modal.style.display = 'none';
-        
-        // 确保列表刷新
-        if (currentSelectedCountry) {
-            renderListForCountryWithFilter(currentSelectedCountry);
-        }
-    }
-
-    // ========== Google Sheet 連線函數 ==========
+    // ---------- Google Sheet 連線函數 ----------
     async function syncToSheet(payload) {
         try {
             const res = await fetch(APPS_SCRIPT_URL, {
@@ -367,7 +170,6 @@
             return data;
         } catch (err) {
             console.warn("Sheet sync failed:", err);
-            // 不抛出错误，允许离线使用
             return { ok: false, error: err.message };
         }
     }
@@ -394,42 +196,357 @@
         };
     }
 
-    // ========== 地圖初始化 ==========
+    // ---------- 辅助函数 ----------
+    function generateId() {
+        return 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+    }
+
+    // 从localStorage加载原始数组
+    function loadDataFromLS() {
+        const stored = localStorage.getItem('travel_records');
+        if (!stored) return [];
+        try {
+            return JSON.parse(stored);
+        } catch(e) {
+            return [];
+        }
+    }
+
+    // loadData: 加载全部数据并刷新全局allRecords
+    function loadData() {
+        allRecords = loadDataFromLS();
+        // 确保旧记录有status字段 (兼容升级)
+        let needUpdate = false;
+        allRecords = allRecords.map(rec => {
+            if (!rec.status) {
+                needUpdate = true;
+                return { ...rec, status: 'active' };
+            }
+            return rec;
+        });
+        if (needUpdate) {
+            localStorage.setItem('travel_records', JSON.stringify(allRecords));
+        }
+        if (currentSelectedCountry) {
+            renderListForCountryWithFilter(currentSelectedCountry);
+        } else {
+            renderList([]);
+        }
+    }
+
+    // 保存全量数据到localStorage (内部使用)
+    function persistAllRecords() {
+        localStorage.setItem('travel_records', JSON.stringify(allRecords));
+    }
+
+    // saveData: 保存单条记录 (新增或更新)
+    function saveData(record) {
+        const existingIndex = allRecords.findIndex(r => r.id === record.id);
+        if (existingIndex !== -1) {
+            allRecords[existingIndex] = record;
+        } else {
+            allRecords.push(record);
+        }
+        persistAllRecords();
+        
+        // 同步到 Google Sheet
+        syncToSheet({ action: "create", record: record }).catch(err => 
+            console.warn("Sheet sync failed (create):", err)
+        );
+        
+        // 若当前有选中国家且记录国家匹配，刷新列表
+        if (currentSelectedCountry && record.countryName === currentSelectedCountry) {
+            renderListForCountryWithFilter(currentSelectedCountry);
+        } else if (currentSelectedCountry && existingIndex === -1) {
+            // 新增记录且国家匹配时刷新
+            if (record.countryName === currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
+        }
+    }
+
+    // createRecord: 根据表单数据构建新对象，包含默认 status = 'active'
+    function createRecord(formData) {
+        return {
+            id: generateId(),
+            countryName: formData.countryName,
+            content: formData.content.trim(),
+            category: formData.category,
+            locationDetail: formData.locationDetail ? formData.locationDetail.trim() : '',
+            rating: Number(formData.rating),
+            tag: formData.tag ? formData.tag.trim() : '',
+            createdAt: Date.now(),
+            status: 'active'     // 新增记录默认为 active
+        };
+    }
+
+    // updateRecord: 根据id更新部分字段 (例如切换status)
+    function updateRecord(id, changes) {
+        const index = allRecords.findIndex(r => r.id === id);
+        if (index === -1) return false;
+        const updated = { ...allRecords[index], ...changes };
+        allRecords[index] = updated;
+        persistAllRecords();
+        
+        // 同步到 Google Sheet
+        syncToSheet({ action: "update", id: id, changes: changes }).catch(err => 
+            console.warn("Sheet sync failed (update):", err)
+        );
+        
+        // 如果当前选中国家与更新记录国家相同，刷新视图
+        if (currentSelectedCountry && updated.countryName === currentSelectedCountry) {
+            renderListForCountryWithFilter(currentSelectedCountry);
+        }
+        return true;
+    }
+
+    // 删除记录
+    function deleteRecordById(id) {
+        const recordToDel = allRecords.find(r => r.id === id);
+        if (!recordToDel) return;
+        allRecords = allRecords.filter(r => r.id !== id);
+        persistAllRecords();
+        if (currentSelectedCountry && recordToDel.countryName === currentSelectedCountry) {
+            renderListForCountryWithFilter(currentSelectedCountry);
+        }
+    }
+
+    // 根据国家和当前筛选器获取要显示的记录
+    function getFilteredRecordsByCountry(countryName) {
+        let records = allRecords.filter(rec => rec.countryName === countryName);
+        if (currentFilter === 'active') {
+            records = records.filter(rec => rec.status === 'active');
+        } else if (currentFilter === 'done') {
+            records = records.filter(rec => rec.status === 'done');
+        }
+        return records.sort((a,b) => b.createdAt - a.createdAt);
+    }
+
+    // renderList: 纯渲染函数，接收recordsToShow数组
+    function renderList(recordsToShow) {
+        if (!recordsListDiv) return;
+        if (!recordsToShow || recordsToShow.length === 0) {
+            let message = '';
+            if (currentFilter === 'active') message = '✨ 没有「想去」的指南，点击添加吧 ✨';
+            else if (currentFilter === 'done') message = '✅ 暂无「去过」标记的指南，试试切换状态～';
+            else message = '✨ 暂无人分享，快成为第一个留下指南的旅行者吧 ✨';
+            recordsListDiv.innerHTML = `<div class="empty-tip">${message}</div>`;
+            return;
+        }
+        let html = '';
+        for (let rec of recordsToShow) {
+            const isDone = rec.status === 'done';
+            const cardDoneClass = isDone ? 'status-done' : '';
+            const safeContent = escapeHtml(rec.content);
+            const safeLocationDetail = escapeHtml(rec.locationDetail || '');
+            const safeTag = rec.tag ? escapeHtml(rec.tag) : '';
+            const ratingStars = '⭐'.repeat(rec.rating) + '☆'.repeat(5 - rec.rating);
+            const dateStr = new Date(rec.createdAt).toLocaleDateString('zh-CN', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+            const displayLoc = safeLocationDetail ? `${safeLocationDetail}` : '某处';
+            const statusText = isDone ? '✅ 已完成' : '✨ 想去';
+            const toggleLabel = isDone ? '🔄 标记为想去' : '✔️ 标记去过';
+            
+            html += `
+                <div class="record-card ${cardDoneClass}" data-id="${rec.id}">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span class="card-category">${escapeHtml(rec.category)}</span>
+                        <span class="status-badge ${isDone ? 'done' : ''}">${statusText}</span>
+                    </div>
+                    <div class="card-location">📍 ${displayLoc}</div>
+                    <div class="quote">“ ${safeContent} ”</div>
+                    <div class="rating">${ratingStars}</div>
+                    <div class="record-footer">
+                        <span>🏷️ ${safeTag ? '#'+safeTag : '无标签'}</span>
+                        <span>📅 ${dateStr}</span>
+                        <div class="record-actions">
+                            <button class="toggle-status-btn" data-id="${rec.id}" data-status="${rec.status}">${toggleLabel}</button>
+                            <button class="delete-record" data-id="${rec.id}">🗑️ 删除</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        recordsListDiv.innerHTML = html;
+        
+        // 绑定状态切换事件
+        document.querySelectorAll('.toggle-status-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.getAttribute('data-id');
+                const currentStatus = btn.getAttribute('data-status');
+                const newStatus = currentStatus === 'active' ? 'done' : 'active';
+                updateRecord(id, { status: newStatus });
+                // 刷新当前国家的列表 (保持筛选)
+                if (currentSelectedCountry) {
+                    renderListForCountryWithFilter(currentSelectedCountry);
+                }
+            });
+        });
+        
+        // 绑定删除事件
+        document.querySelectorAll('.delete-record').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.getAttribute('data-id');
+                if (confirm('删除这条旅行指南？')) {
+                    deleteRecordById(id);
+                }
+            });
+        });
+    }
+    
+    // 根据国家+当前筛选器渲染
+    function renderListForCountryWithFilter(countryName) {
+        const filteredRecords = getFilteredRecordsByCountry(countryName);
+        renderList(filteredRecords);
+    }
+    
+    // 改变筛选器时调用，刷新当前国家视图
+    function setFilter(filter) {
+        currentFilter = filter;
+        // UI 高亮按钮
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            if (btn.getAttribute('data-filter') === filter) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+        if (currentSelectedCountry) {
+            renderListForCountryWithFilter(currentSelectedCountry);
+        } else {
+            renderList([]);
+        }
+    }
+
+    // 辅助转义
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    // 点击国家的处理
+    function onCountryClick(countryName) {
+        if (!countryName) return;
+        currentSelectedCountry = countryName;
+        selectedCountrySpan.innerText = countryName;
+        openAddBtn.disabled = false;
+        renderListForCountryWithFilter(countryName);
+    }
+    
+    // 打开新增模态窗
+    function openAddSuggestionModal() {
+        if (!currentSelectedCountry) {
+            alert('请先点击地图选择一个国家');
+            return;
+        }
+        modalCountrySpan.innerText = currentSelectedCountry;
+        modalContent.value = '';
+        modalLocationDetail.value = '';
+        modalCategory.value = '景点秘境';
+        modalRating.value = '5';
+        modalTag.value = '';
+        modal.style.display = 'flex';
+    }
+    
+    // 保存新建议
+    function saveNewSuggestion() {
+        if (!currentSelectedCountry) {
+            alert('未选中任何国家，请点击地图');
+            modal.style.display = 'none';
+            return;
+        }
+        const content = modalContent.value.trim();
+        if (!content) {
+            alert('请填写一句旅行真心话 ✏️');
+            return;
+        }
+        const formData = {
+            countryName: currentSelectedCountry,
+            content: content,
+            category: modalCategory.value,
+            locationDetail: modalLocationDetail.value.trim(),
+            rating: modalRating.value,
+            tag: modalTag.value.trim()
+        };
+        const newRecord = createRecord(formData);
+        saveData(newRecord);     // 存储并自动刷新当前国家列表 (根据筛选)
+        modal.style.display = 'none';
+        // 确保重新渲染（saveData 内已经根据条件刷新，但为了安全再次调用）
+        if (currentSelectedCountry) renderListForCountryWithFilter(currentSelectedCountry);
+    }
+    
+    // ---------- 地图初始化 (Leaflet + GeoJSON) ----------
     async function initMap() {
         map = L.map('worldMap').setView([20, 0], 2);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> & CartoDB',
-            subdomains: 'abcd', maxZoom: 6, minZoom: 1.5
+            subdomains: 'abcd',
+            maxZoom: 6,
+            minZoom: 1.5
         }).addTo(map);
+        
         const geoJsonUrl = 'https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson';
         try {
             const response = await fetch(geoJsonUrl);
             const data = await response.json();
             geoJsonLayer = L.geoJSON(data, {
-                style: { color: '#3c6e3f', weight: 1.2, fillColor: '#88b574', fillOpacity: 0.5 },
+                style: {
+                    color: '#3c6e3f',
+                    weight: 1.2,
+                    fillColor: '#88b574',
+                    fillOpacity: 0.5
+                },
                 onEachFeature: (feature, layer) => {
                     let countryName = feature.properties?.ADMIN || feature.properties?.name;
                     if (!countryName) countryName = feature.properties?.NAME || '未知地区';
-                    const nameMap = { "United States":"美国","China":"中国","Japan":"日本","India":"印度","United Kingdom":"英国","France":"法国","Germany":"德国","Italy":"意大利","Spain":"西班牙","Australia":"澳大利亚","Canada":"加拿大","Brazil":"巴西","Russia":"俄罗斯","Mexico":"墨西哥","Thailand":"泰国","Vietnam":"越南","South Korea":"韩国","Indonesia":"印度尼西亚","Turkey":"土耳其","Egypt":"埃及" };
+                    const nameMap = {
+                        "United States": "美国", "China": "中国", "Japan": "日本", "India": "印度", 
+                        "United Kingdom": "英国", "France": "法国", "Germany": "德国", "Italy": "意大利",
+                        "Spain": "西班牙", "Australia": "澳大利亚", "Canada": "加拿大", "Brazil": "巴西",
+                        "Russia": "俄罗斯", "Mexico": "墨西哥", "Thailand": "泰国", "Vietnam": "越南",
+                        "South Korea": "韩国", "Indonesia": "印度尼西亚", "Turkey": "土耳其", "Egypt": "埃及"
+                    };
                     if (nameMap[countryName]) countryName = nameMap[countryName];
-                    layer.on('click', (e) => { L.DomEvent.stopPropagation(e); onCountryClick(countryName); layer.setStyle({ fillOpacity: 0.9, weight: 2, color: '#f5a623' }); setTimeout(() => geoJsonLayer.resetStyle(layer), 300); });
+                    
+                    layer.on('click', (e) => {
+                        L.DomEvent.stopPropagation(e);
+                        onCountryClick(countryName);
+                        layer.setStyle({ fillOpacity: 0.9, weight: 2, color: '#f5a623' });
+                        setTimeout(() => {
+                            geoJsonLayer.resetStyle(layer);
+                        }, 300);
+                    });
                     layer.bindTooltip(countryName, { sticky: true, offset: [0, -5] });
                 }
             }).addTo(map);
-        } catch (err) { console.warn("GeoJSON加载失败，使用基础底图", err); map.setView([20, 0], 2); }
+        } catch (err) {
+            console.warn("GeoJSON加载失败，使用基础底图", err);
+            map.setView([20, 0], 2);
+        }
     }
-
+    
+    // 绑定UI事件 + 筛选器
     function bindUIEvents() {
         openAddBtn.addEventListener('click', openAddSuggestionModal);
         closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
         saveSuggestionBtn.addEventListener('click', saveNewSuggestion);
-        window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        });
+        // 筛选按钮事件
         document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => { const filterValue = btn.getAttribute('data-filter'); if (filterValue) setFilter(filterValue); });
+            btn.addEventListener('click', (e) => {
+                const filterValue = btn.getAttribute('data-filter');
+                if (filterValue) setFilter(filterValue);
+            });
         });
     }
-
-    // ========== 主入口 ==========
+    
+    // 主入口
     async function init() {
         // 優先從 Google Sheet 加載資料
         let loadedFromSheet = false;
@@ -438,7 +555,10 @@
             if (rawRecords && rawRecords.length > 0) {
                 allRecords = rawRecords.map(normalizeRecord);
                 // 確保每個 record 都有 status 欄位
-                allRecords = allRecords.map(rec => { if (!rec.status) rec.status = 'active'; return rec; });
+                allRecords = allRecords.map(rec => { 
+                    if (!rec.status) rec.status = 'active'; 
+                    return rec; 
+                });
                 persistAllRecords(); // 同步到 localStorage 作為離線備份
                 loadedFromSheet = true;
                 console.log("从 Google Sheet 加载了 " + allRecords.length + " 条记录");
@@ -446,25 +566,27 @@
         } catch (err) {
             console.warn("无法从 Google Sheet 加载，fallback 到 localStorage:", err);
         }
+        
         if (!loadedFromSheet) {
             loadData(); // fallback 到 localStorage
             console.log("从 localStorage 加载记录");
         }
+        
         initMap();
         bindUIEvents();
         openAddBtn.disabled = true;
         selectedCountrySpan.innerText = '请点击国家';
-        setFilter('all');
+        setFilter('all');       // 默认全部显示
         renderList([]);
     }
-
-    // 掛載函數便於調試
+    
+    // 挂载函数便于调试
     window.createRecord = createRecord;
     window.saveData = saveData;
     window.loadData = loadData;
     window.updateRecord = updateRecord;
     window.renderList = renderList;
-
+    
     init();
 </script>
 </body>

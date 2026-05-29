@@ -2,250 +2,494 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>🗺️ 地图旅行指南针 | 世界真心话 · 旅行状态管家</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.2, user-scalable=yes, viewport-fit=cover">
+    <title>🗺️ 地图旅行指南针 · 世界真心话</title>
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
     </script>
     <style>
+        :root {
+            --bg-deep: #1a2e1b;
+            --bg-panel: #fefaf2;
+            --accent-soft: #88a87d;
+            --accent-warm: #e09e5b;
+            --accent-active: #4f7a4c;
+            --text-primary: #2d3a2a;
+            --text-soft: #6a5f4a;
+            --card-bg: #ffffff;
+            --border-light: #e2d9c8;
+            --shadow-card: 0 8px 20px rgba(0, 0, 0, 0.06);
+            --radius-xl: 32px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+            --radius-full: 50px;
+            --transition-base: 0.25s cubic-bezier(0.2, 0.0, 0.1, 1);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+            font-family: 'Inter', system-ui, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Noto Sans TC', sans-serif;
         }
+
         body {
-            background: #2b3b2c;
+            background: radial-gradient(circle at 30% 10%, #30452b, #1d2c1b);
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 16px;
+            padding: 20px;
+            margin: 0;
         }
+
         .app-wrapper {
             max-width: 1400px;
             width: 100%;
-            background: #1e2a21;
-            border-radius: 40px;
-            box-shadow: 0 25px 45px -12px rgba(0, 0, 0, 0.5);
+            background: rgba(26, 34, 21, 0.85);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 48px;
+            box-shadow: 0 30px 50px -16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 200, 0.15);
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            border: 1px solid rgba(150, 180, 130, 0.25);
         }
+
         .header {
-            background: #1f2e1b;
-            padding: 14px 24px;
-            color: #f9efcf;
+            background: rgba(28, 38, 20, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 16px 28px;
+            color: #fbf5e3;
             display: flex;
             justify-content: space-between;
             align-items: baseline;
             flex-wrap: wrap;
-            gap: 10px;
-            border-bottom: 1px solid #44633e;
+            gap: 12px;
+            border-bottom: 1px solid #5b7b4a;
+            letter-spacing: 0.2px;
         }
+
         .header h1 {
-            font-size: 1.6rem;
+            font-size: 1.8rem;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             font-weight: 600;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(to right, #f9efd2, #e2d7b5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
+
         .header p {
-            font-size: 0.8rem;
-            opacity: 0.8;
+            font-size: 0.85rem;
+            opacity: 0.9;
+            background: rgba(60, 80, 50, 0.5);
+            padding: 6px 16px;
+            border-radius: 50px;
+            color: #f0eddb;
         }
+
         .map-and-panel {
             display: flex;
             flex-wrap: wrap;
+            background: rgba(0,0,0,0.08);
         }
+
         .map-container {
             flex: 2.5;
-            min-width: 280px;
-            height: 550px;
-            background: #303e2b;
+            min-width: 300px;
+            height: 580px;
+            background: #c8ddbb;
             position: relative;
-            border-right: 1px solid #5b7a53;
+            border-right: 1px solid #7d9b6a;
+            overflow: hidden;
         }
+
         #worldMap {
             height: 100%;
             width: 100%;
-            background: #cfe3cd;
+            background: #e3efd3;
         }
+
         .suggestions-panel {
             flex: 1.2;
-            min-width: 280px;
-            background: #fef8ed;
+            min-width: 300px;
+            background: #fdf8ed;
             display: flex;
             flex-direction: column;
             overflow-y: auto;
-            max-height: 550px;
+            max-height: 580px;
+            backdrop-filter: blur(4px);
         }
+
         .panel-header {
-            background: #e9dfcf;
-            padding: 16px 18px;
-            border-bottom: 2px solid #cbbfaa;
+            background: #f5eddb;
+            padding: 18px 20px;
+            border-bottom: 2px solid #d6c9ab;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(8px);
         }
+
         .panel-header h3 {
             display: flex;
             align-items: center;
             gap: 8px;
-            font-size: 1.2rem;
-            color: #2c4b2a;
+            font-size: 1.25rem;
+            color: #2b4b22;
+            font-weight: 600;
         }
+
         .selected-country {
-            font-weight: bold;
-            color: #c2562c;
+            font-weight: 700;
+            color: #c85d2c;
+            background: #ffe9d4;
+            padding: 2px 12px;
+            border-radius: 30px;
+            font-size: 0.95rem;
         }
+
         .add-suggestion-btn {
-            background: #508050;
+            background: #558b4b;
             color: white;
             border: none;
-            padding: 8px 14px;
-            border-radius: 50px;
-            margin-top: 10px;
+            padding: 12px 18px;
+            border-radius: 60px;
+            margin-top: 14px;
             font-weight: 600;
             width: 100%;
             cursor: pointer;
-            transition: 0.2s;
+            transition: all var(--transition-base);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 10px rgba(80, 110, 50, 0.25);
         }
-        .add-suggestion-btn:hover {
-            background: #2f6130;
+
+        .add-suggestion-btn:hover:not(:disabled) {
+            background: #3d6e38;
+            transform: scale(1.02);
+            box-shadow: 0 8px 18px rgba(60, 90, 40, 0.35);
         }
+
+        .add-suggestion-btn:disabled {
+            opacity: 0.5;
+            background: #9ba98b;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
         .status-filter {
             display: flex;
             gap: 8px;
-            margin-top: 12px;
-            background: #f4eddf;
-            padding: 6px 12px;
-            border-radius: 40px;
+            margin-top: 14px;
+            background: #f7f1e2;
+            padding: 6px 14px;
+            border-radius: 50px;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
         }
+
         .filter-btn {
             background: transparent;
             border: none;
-            padding: 4px 12px;
+            padding: 6px 14px;
             border-radius: 30px;
             font-size: 0.75rem;
             cursor: pointer;
-            font-weight: 500;
-            color: #5b4c34;
-            transition: all 0.2s;
+            font-weight: 600;
+            color: #5d523a;
+            transition: all var(--transition-base);
         }
+
         .filter-btn.active {
-            background: #508050;
+            background: #558b4b;
             color: white;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
         }
+
+        .filter-btn:hover:not(.active) {
+            background: #e7dcc8;
+        }
+
         .records-list {
-            padding: 12px;
+            padding: 16px 16px 20px;
             flex: 1;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 14px;
+            background: #fefaf3;
+            max-height: 300px;
+            min-height: 150px;
         }
+
         .record-card {
             background: white;
             border-radius: 24px;
-            padding: 14px;
-            border-left: 8px solid #90b77d;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            transition: all 0.2s;
+            padding: 16px;
+            border-left: 8px solid #9cbe88;
+            box-shadow: var(--shadow-card);
+            transition: all var(--transition-base);
+            border: 1px solid rgba(180, 160, 130, 0.15);
         }
+
+        .record-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 24px rgba(0, 0, 0, 0.08);
+            border-left-color: #c9a96b;
+        }
+
         .record-card.status-done {
-            opacity: 0.65;
-            background: #f3f0e8;
-            border-left-color: #b0aa90;
-            filter: grayscale(0.05);
+            opacity: 0.7;
+            background: #f5f2e9;
+            border-left-color: #bcb09b;
+            filter: grayscale(0.15);
         }
+
         .card-category {
             display: inline-block;
-            background: #eef2e0;
-            padding: 2px 12px;
-            border-radius: 20px;
+            background: #ecf2e0;
+            padding: 4px 14px;
+            border-radius: 40px;
             font-size: 0.7rem;
-            font-weight: bold;
+            font-weight: 700;
             color: #456b41;
+            letter-spacing: 0.3px;
         }
+
         .card-location {
-            font-size: 0.75rem;
-            color: #977b53;
-            margin: 6px 0 4px;
+            font-size: 0.8rem;
+            color: #8b7b55;
+            margin: 8px 0 4px;
+            font-weight: 500;
         }
+
         .quote {
             font-style: italic;
-            margin: 8px 0;
-            font-size: 0.9rem;
-            color: #2d3529;
-            background: #faf2e2;
-            padding: 8px 10px;
-            border-radius: 16px;
+            margin: 10px 0;
+            font-size: 0.92rem;
+            color: #2f392b;
+            background: #faf4e6;
+            padding: 10px 14px;
+            border-radius: 18px;
+            line-height: 1.4;
         }
+
         .rating {
-            font-size: 0.7rem;
-            margin: 5px 0;
+            font-size: 0.75rem;
+            margin: 6px 0;
+            color: #ca8a3a;
+            letter-spacing: 1px;
         }
+
         .record-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 8px;
-            font-size: 0.65rem;
-            color: #b6a07e;
+            margin-top: 10px;
+            font-size: 0.7rem;
+            color: #aa9b7a;
             flex-wrap: wrap;
-            gap: 6px;
+            gap: 8px;
         }
+
         .status-badge {
             font-size: 0.65rem;
-            padding: 2px 8px;
-            border-radius: 30px;
-            background: #e3d9cb;
-            color: #6b5a42;
+            padding: 3px 12px;
+            border-radius: 40px;
+            background: #e9e0ce;
+            color: #695f45;
+            font-weight: 600;
         }
+
         .status-badge.done {
-            background: #cfcabc;
-            color: #5a4e3a;
+            background: #dad3c2;
+            color: #5c543b;
             text-decoration: line-through;
         }
+
         .record-actions {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             align-items: center;
         }
+
         .toggle-status-btn {
-            background: #e7dfd1;
+            background: #efe7d7;
             border: none;
             border-radius: 30px;
-            padding: 4px 10px;
+            padding: 5px 14px;
             font-size: 0.7rem;
             cursor: pointer;
-            font-weight: 500;
-            color: #4f6b3c;
+            font-weight: 600;
+            color: #4a6237;
+            transition: all var(--transition-base);
         }
+
+        .toggle-status-btn:hover {
+            background: #d9cdb0;
+            color: #2c431e;
+        }
+
         .delete-record {
             background: none;
             border: none;
             color: #bc7a5a;
             cursor: pointer;
-            font-size: 0.8rem;
-            padding: 2px 8px;
-            border-radius: 50px;
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 40px;
+            transition: all var(--transition-base);
         }
+
         .delete-record:hover {
-            background: #ffe1d4;
+            background: #ffe6d8;
+            color: #a04e2e;
         }
+
         .empty-tip {
             text-align: center;
-            padding: 40px 20px;
-            color: #b59d7a;
-            font-size: 0.85rem;
+            padding: 48px 20px;
+            color: #b9a889;
+            font-size: 0.9rem;
+            background: #fefbf5;
+            border-radius: 28px;
         }
+
+        /* 資料視覺化區域 */
+        .visualization-section {
+            border-top: 3px solid #d6c9ab;
+            background: #f8f2e4;
+            padding: 16px 16px 20px;
+        }
+
+        .viz-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #2b4b22;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .viz-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .viz-card {
+            background: white;
+            border-radius: 20px;
+            padding: 14px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            border: 1px solid rgba(180, 160, 130, 0.2);
+        }
+
+        .viz-card h4 {
+            font-size: 0.8rem;
+            color: #5d523a;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .viz-card canvas {
+            width: 100%;
+            height: 140px;
+            display: block;
+        }
+
+        .country-bar-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .country-bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.75rem;
+        }
+
+        .country-bar-label {
+            width: 70px;
+            text-align: right;
+            color: #5d523a;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .country-bar-track {
+            flex: 1;
+            height: 18px;
+            background: #f0e8d5;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .country-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #88a87d, #558b4b);
+            border-radius: 20px;
+            transition: width 0.6s cubic-bezier(0.2, 0.0, 0.1, 1);
+            min-width: 4px;
+        }
+
+        .country-bar-count {
+            width: 24px;
+            text-align: left;
+            font-weight: 700;
+            color: #2b4b22;
+            font-size: 0.7rem;
+        }
+
+        .stats-summary {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .stat-item {
+            background: #fefaf2;
+            border-radius: 16px;
+            padding: 10px 14px;
+            min-width: 70px;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #2b4b22;
+        }
+
+        .stat-label {
+            font-size: 0.65rem;
+            color: #8b7b55;
+            margin-top: 2px;
+        }
+
         .modal {
             display: none;
             position: fixed;
@@ -253,108 +497,181 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
             align-items: center;
             justify-content: center;
             z-index: 2000;
         }
+
         .modal-content {
-            background: #fff8ef;
-            max-width: 450px;
-            width: 90%;
+            background: #fffdf5;
+            max-width: 460px;
+            width: 92%;
             border-radius: 48px;
-            padding: 24px 22px;
-            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.3);
+            padding: 28px 24px;
+            box-shadow: 0 30px 45px rgba(0, 0, 0, 0.4);
+            transition: all 0.2s;
         }
+
         .modal-content h3 {
-            margin-bottom: 20px;
+            margin-bottom: 22px;
             display: flex;
-            gap: 8px;
+            gap: 10px;
             align-items: center;
-            color: #2e542c;
+            color: #2e4d23;
         }
+
         .modal-content input,
         .modal-content select,
         .modal-content textarea {
             width: 100%;
             margin-bottom: 16px;
-            padding: 12px;
+            padding: 13px 16px;
             border-radius: 40px;
-            border: 1px solid #ddd0bb;
-            background: #fefaf5;
+            border: 1px solid #ddd2bb;
+            background: #fffdf8;
+            font-size: 0.9rem;
         }
+
         .modal-content textarea {
             border-radius: 24px;
             resize: vertical;
         }
+
         .modal-buttons {
             display: flex;
-            gap: 12px;
+            gap: 14px;
             justify-content: flex-end;
         }
+
         .modal-buttons button {
-            padding: 8px 18px;
+            padding: 10px 22px;
             border-radius: 40px;
             border: none;
-            font-weight: bold;
+            font-weight: 600;
             cursor: pointer;
+            transition: all var(--transition-base);
         }
+
         .save-btn {
             background: #5b8c4e;
             color: white;
         }
-        .cancel-btn {
-            background: #ccc2b2;
+
+        .save-btn:hover {
+            background: #3c6532;
         }
+
+        .cancel-btn {
+            background: #d9cfbc;
+            color: #3b3a2e;
+        }
+
+        .cancel-btn:hover {
+            background: #c2b59d;
+        }
+
         .leaflet-interactive {
             cursor: pointer;
-            transition: fill-opacity 0.2s;
+            transition: fill-opacity 0.2s, stroke 0.15s;
         }
+
         .leaflet-interactive:hover {
-            fill-opacity: 0.7;
-            stroke: #ffd966;
-            stroke-width: 1.5;
+            fill-opacity: 0.8;
+            stroke: #f5b042;
+            stroke-width: 2;
         }
+
         .sync-status {
             font-size: 0.7rem;
-            padding: 4px 10px;
-            border-radius: 30px;
-            background: #e3d9cb;
-            color: #6b5a42;
+            padding: 6px 14px;
+            border-radius: 50px;
+            background: #e8e0cf;
+            color: #62583e;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
+            font-weight: 500;
         }
+
         .sync-status.online {
-            background: #d4edda;
-            color: #3c6e3f;
+            background: #d9eed9;
+            color: #2f5c2f;
         }
+
         .sync-status.offline {
-            background: #fce4d6;
-            color: #c2562c;
+            background: #fce6d6;
+            color: #c85d2c;
         }
+
         footer {
             text-align: center;
-            font-size: 0.7rem;
-            background: #202f1c;
-            color: #98a888;
-            padding: 8px;
+            font-size: 0.75rem;
+            background: #1e2d16;
+            color: #b7c4a5;
+            padding: 10px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 16px;
+            flex-wrap: wrap;
+            gap: 10px;
+            border-top: 1px solid #4e6b3a;
         }
+
+        /* 手機優化 */
         @media (max-width: 800px) {
+            body {
+                padding: 10px;
+            }
+
+            .app-wrapper {
+                border-radius: 32px;
+            }
+
+            .header h1 {
+                font-size: 1.4rem;
+            }
+
             .map-and-panel {
                 flex-direction: column;
             }
+
             .map-container {
                 height: 380px;
                 border-right: none;
-                border-bottom: 1px solid #7e9a6e;
+                border-bottom: 1px solid #8aa877;
             }
+
             .suggestions-panel {
-                max-height: 380px;
+                max-height: none;
+            }
+
+            .records-list {
+                max-height: 250px;
+            }
+
+            .record-card {
+                padding: 14px;
+            }
+
+            .modal-content {
+                padding: 22px 18px;
+            }
+
+            .viz-card canvas {
+                height: 120px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header {
+                padding: 12px 16px;
+            }
+
+            .status-filter {
+                flex-wrap: wrap;
+                gap: 6px;
             }
         }
     </style>
@@ -363,7 +680,7 @@
     <div class="app-wrapper">
         <div class="header">
             <h1>🗺️ 地图旅行指南针 · 世界真心话</h1>
-            <p>✈️ 点击国家 → 留下/浏览建议 · 标记「去过✓」管理旅行状态</p>
+            <p>✈️ 点击国家 → 留下/浏览建议 · 标记「去过✓」</p>
         </div>
         <div class="map-and-panel">
             <div class="map-container">
@@ -374,14 +691,48 @@
                     <h3>📍 当前地点：<span id="selectedCountryName" class="selected-country">尚未选择国家</span></h3>
                     <button id="openAddBtn" class="add-suggestion-btn" disabled>➕ 为此地添加一条旅行建议</button>
                     <div class="status-filter">
-                        <span style="font-size:0.7rem;">🔍 筛选：</span>
+                        <span style="font-size:0.7rem; font-weight:500;">🔍 筛选：</span>
                         <button class="filter-btn active" data-filter="all">全部</button>
-                        <button class="filter-btn" data-filter="active">✨ 想去 (active)</button>
-                        <button class="filter-btn" data-filter="done">✅ 去过 (done)</button>
+                        <button class="filter-btn" data-filter="active">✨ 想去</button>
+                        <button class="filter-btn" data-filter="done">✅ 去过</button>
                     </div>
                 </div>
                 <div class="records-list" id="recordsList">
                     <div class="empty-tip">✨ 点击地图上的国家，查看当地旅行真心话</div>
+                </div>
+                <!-- 資料視覺化區域 -->
+                <div class="visualization-section" id="visualizationSection">
+                    <div class="viz-title">📊 旅行數據總覽</div>
+                    <div class="stats-summary" id="statsSummary">
+                        <div class="stat-item">
+                            <div class="stat-value" id="statTotal">0</div>
+                            <div class="stat-label">總建議數</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statCountries">0</div>
+                            <div class="stat-label">涵蓋國家</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="statDone">0</div>
+                            <div class="stat-label">已體驗</div>
+                        </div>
+                    </div>
+                    <div class="viz-grid">
+                        <div class="viz-card">
+                            <h4>📂 建議類別分布</h4>
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                        <div class="viz-card">
+                            <h4>⭐ 評分分布</h4>
+                            <canvas id="ratingChart"></canvas>
+                        </div>
+                        <div class="viz-card">
+                            <h4>🏆 熱門國家 Top 6</h4>
+                            <div class="country-bar-list" id="countryBarList">
+                                <div style="text-align:center;color:#b9a889;font-size:0.8rem;">尚無數據</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -404,7 +755,7 @@
                 <option value="冷门技巧">💡 冷门技巧</option>
                 <option value="在地体验">🎭 在地体验</option>
             </select>
-            <div style="display: flex; gap: 12px; align-items: center;">
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                 <label>⭐ 推荐指数：</label>
                 <input type="number" id="modalRating" min="1" max="5" value="5" style="width: 80px;">
                 <input type="text" id="modalTag" placeholder="标签 (自由/小众/免费)" style="flex:1;">
@@ -423,33 +774,26 @@
         const APPS_SCRIPT_URL =
             "https://script.google.com/macros/s/AKfycbyVlTlljhhvou1yVnFQJ7pj8vki6q4vWjn1JZ6NkOCOl5bHYa6cRV1ibwVcGGo-PQLYrQ/exec";
 
-        let isOnline = false; // 追蹤 Sheet 連線狀態
+        let isOnline = false;
 
-        // 將 Sheet 回傳的 record 正規化（確保型別正確）
         function normalizeRecord(record) {
             const normalized = {};
-            // 複製所有欄位
             for (const key of Object.keys(record)) {
                 let value = record[key];
-                // 確保 rating 是數字
                 if (key === "rating") {
                     value = Number(value) || 5;
                 }
-                // 確保 createdAt 是數字
                 if (key === "createdAt") {
                     value = Number(value) || Date.now();
                 }
-                // 確保 status 是字串且有預設值
                 if (key === "status") {
                     value = String(value || "active");
                 }
                 normalized[key] = value;
             }
-            // 如果沒有 id，生成一個
             if (!normalized.id) {
                 normalized.id = generateId();
             }
-            // 確保必要欄位存在
             if (!normalized.status) normalized.status = "active";
             if (!normalized.createdAt) normalized.createdAt = Date.now();
             if (!normalized.rating) normalized.rating = 5;
@@ -459,7 +803,6 @@
             return normalized;
         }
 
-        // POST 同步到 Google Sheet
         async function syncToSheet(payload) {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("PASTE_YOUR")) {
                 console.warn("APPS_SCRIPT_URL 未設定，跳過同步");
@@ -487,7 +830,6 @@
             }
         }
 
-        // GET 從 Google Sheet 讀取所有 records
         async function fetchRecordsFromSheet() {
             if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("PASTE_YOUR")) {
                 console.warn("APPS_SCRIPT_URL 未設定");
@@ -513,7 +855,6 @@
             }
         }
 
-        // 更新連線狀態 UI
         function updateSyncStatus(online) {
             isOnline = online;
             const statusEl = document.getElementById("syncStatus");
@@ -528,26 +869,10 @@
             }
         }
 
-        /**********************************************************
-         * DATA CONTRACT (擴展 status)
-         * 每筆 record 必須包含:
-         * 1. id:          String (唯一標識)
-         * 2. countryName: String (點擊的國家名稱)
-         * 3. content:     String (旅行建議)
-         * 4. category:    String (分類)
-         * 5. locationDetail: String (具體地點)
-         * 6. rating:      Number (1-5)
-         * 7. tag:         String (自定義標籤)
-         * 8. createdAt:   Number (時間戳)
-         * 9. status:      String ('active' 預設 / 'done' 表示已完成/失效)
-         **********************************************************/
+        let allRecords = [];
+        let currentSelectedCountry = null;
+        let currentFilter = 'all';
 
-        // ---------- 全域變數 ----------
-        let allRecords = []; // 所有記錄 (內存)
-        let currentSelectedCountry = null; // 當前選中國家名稱
-        let currentFilter = 'all'; // 'all', 'active', 'done'
-
-        // DOM 元素
         const recordsListDiv = document.getElementById('recordsList');
         const selectedCountrySpan = document.getElementById('selectedCountryName');
         const openAddBtn = document.getElementById('openAddBtn');
@@ -561,16 +886,13 @@
         const closeModalBtn = document.getElementById('closeModalBtn');
         const saveSuggestionBtn = document.getElementById('saveSuggestionBtn');
 
-        // 地圖相關
         let map;
         let geoJsonLayer;
 
-        // ---------- 輔助函數 ----------
         function generateId() {
             return 'rec_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
         }
 
-        // 從 localStorage 載入原始陣列
         function loadDataFromLS() {
             const stored = localStorage.getItem('travel_records');
             if (!stored) return [];
@@ -581,30 +903,23 @@
             }
         }
 
-        // 儲存到 localStorage
         function persistToLocalStorage() {
             localStorage.setItem('travel_records', JSON.stringify(allRecords));
         }
 
-        // loadData: 優先從 Sheet 載入，失敗 fallback localStorage
         async function loadData() {
-            // 優先嘗試從 Google Sheet 讀取
             const sheetRecords = await fetchRecordsFromSheet();
             if (sheetRecords.length > 0) {
                 allRecords = sheetRecords;
-                // 同步到 localStorage 作為離線備份
                 persistToLocalStorage();
             } else if (sheetRecords.length === 0 && isOnline) {
-                // Sheet 是空的但連線正常，使用空陣列
                 allRecords = [];
                 persistToLocalStorage();
             } else {
-                // 離線或讀取失敗，fallback 到 localStorage
                 console.warn("無法從 Sheet 讀取，使用 localStorage");
                 allRecords = loadDataFromLS();
             }
 
-            // 確保舊記錄有 status 欄位 (相容升級)
             let needUpdate = false;
             allRecords = allRecords.map(rec => {
                 if (!rec.status) {
@@ -617,6 +932,8 @@
                 persistToLocalStorage();
             }
 
+            renderDataVisualization();
+
             if (currentSelectedCountry) {
                 renderListForCountryWithFilter(currentSelectedCountry);
             } else {
@@ -624,7 +941,6 @@
             }
         }
 
-        // saveData: 儲存單筆記錄 (新增或更新)，同步到 Sheet
         async function saveData(record) {
             const existingIndex = allRecords.findIndex(r => r.id === record.id);
             if (existingIndex !== -1) {
@@ -634,20 +950,18 @@
             }
             persistToLocalStorage();
 
-            // 同步到 Sheet (非同步，不阻擋 UI)
             syncToSheet({ action: "create", record: record }).then(result => {
                 if (!result.ok) {
                     console.warn("Sheet create sync failed, saved to localStorage only");
                 }
             });
 
-            // 若當前有選中國家且記錄國家匹配，刷新列表
             if (currentSelectedCountry && record.countryName === currentSelectedCountry) {
                 renderListForCountryWithFilter(currentSelectedCountry);
             }
+            renderDataVisualization();
         }
 
-        // createRecord: 根據表單數據構建新對象，包含預設 status = 'active'
         function createRecord(formData) {
             return {
                 id: generateId(),
@@ -658,11 +972,10 @@
                 rating: Number(formData.rating),
                 tag: formData.tag ? formData.tag.trim() : '',
                 createdAt: Date.now(),
-                status: 'active' // 新增記錄預設為 active
+                status: 'active'
             };
         }
 
-        // updateRecord: 根據 id 更新部分欄位，同步到 Sheet
         async function updateRecord(id, changes) {
             const index = allRecords.findIndex(r => r.id === id);
             if (index === -1) return false;
@@ -670,28 +983,25 @@
             allRecords[index] = updated;
             persistToLocalStorage();
 
-            // 同步到 Sheet (非同步)
             syncToSheet({ action: "update", id: id, changes: changes }).then(result => {
                 if (!result.ok) {
                     console.warn("Sheet update sync failed, saved to localStorage only");
                 }
             });
 
-            // 如果當前選中國家與更新記錄國家相同，刷新視圖
             if (currentSelectedCountry && updated.countryName === currentSelectedCountry) {
                 renderListForCountryWithFilter(currentSelectedCountry);
             }
+            renderDataVisualization();
             return true;
         }
 
-        // 刪除記錄，同步到 Sheet
         async function deleteRecordById(id) {
             const recordToDel = allRecords.find(r => r.id === id);
             if (!recordToDel) return;
             allRecords = allRecords.filter(r => r.id !== id);
             persistToLocalStorage();
 
-            // 同步刪除到 Sheet
             syncToSheet({ action: "delete", id: id }).then(result => {
                 if (!result.ok) {
                     console.warn("Sheet delete sync failed, removed from localStorage only");
@@ -701,9 +1011,9 @@
             if (currentSelectedCountry && recordToDel.countryName === currentSelectedCountry) {
                 renderListForCountryWithFilter(currentSelectedCountry);
             }
+            renderDataVisualization();
         }
 
-        // 根據國家和當前篩選器取得要顯示的記錄
         function getFilteredRecordsByCountry(countryName) {
             let records = allRecords.filter(rec => rec.countryName === countryName);
             if (currentFilter === 'active') {
@@ -714,7 +1024,6 @@
             return records.sort((a, b) => b.createdAt - a.createdAt);
         }
 
-        // renderList: 純渲染函數
         function renderList(recordsToShow) {
             if (!recordsListDiv) return;
             if (!recordsToShow || recordsToShow.length === 0) {
@@ -761,7 +1070,6 @@
             }
             recordsListDiv.innerHTML = html;
 
-            // 綁定狀態切換事件
             document.querySelectorAll('.toggle-status-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -772,7 +1080,6 @@
                 });
             });
 
-            // 綁定刪除事件
             document.querySelectorAll('.delete-record').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -784,13 +1091,12 @@
             });
         }
 
-        // 根據國家+當前篩選器渲染
         function renderListForCountryWithFilter(countryName) {
             const filteredRecords = getFilteredRecordsByCountry(countryName);
             renderList(filteredRecords);
+            updateMapHeatmap();
         }
 
-        // 改變篩選器
         function setFilter(filter) {
             currentFilter = filter;
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -807,7 +1113,6 @@
             }
         }
 
-        // HTML 轉義
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, function(m) {
@@ -818,7 +1123,6 @@
             });
         }
 
-        // 點擊國家
         function onCountryClick(countryName) {
             if (!countryName) return;
             currentSelectedCountry = countryName;
@@ -827,7 +1131,6 @@
             renderListForCountryWithFilter(countryName);
         }
 
-        // 打開新增模態窗
         function openAddSuggestionModal() {
             if (!currentSelectedCountry) {
                 alert('请先点击地图选择一个国家');
@@ -842,7 +1145,6 @@
             modal.style.display = 'flex';
         }
 
-        // 儲存新建議
         function saveNewSuggestion() {
             if (!currentSelectedCountry) {
                 alert('未选中任何国家，请点击地图');
@@ -867,14 +1169,228 @@
             modal.style.display = 'none';
         }
 
-        // ---------- 地圖初始化 ----------
+        function updateMapHeatmap() {
+            if (!geoJsonLayer) return;
+            const countryCountMap = new Map();
+            allRecords.forEach(rec => {
+                if (rec.countryName) {
+                    countryCountMap.set(rec.countryName, (countryCountMap.get(rec.countryName) || 0) + 1);
+                }
+            });
+
+            geoJsonLayer.eachLayer(layer => {
+                const feature = layer.feature;
+                if (!feature || !feature.properties) return;
+                let countryName = feature.properties?.ADMIN || feature.properties?.name || feature.properties?.NAME;
+                const nameMap = {
+                    "United States": "美国", "China": "中国", "Japan": "日本", "India": "印度",
+                    "United Kingdom": "英国", "France": "法国", "Germany": "德国", "Italy": "意大利",
+                    "Spain": "西班牙", "Australia": "澳大利亚", "Canada": "加拿大", "Brazil": "巴西",
+                    "Russia": "俄罗斯", "Mexico": "墨西哥", "Thailand": "泰国", "Vietnam": "越南",
+                    "South Korea": "韩国", "Indonesia": "印度尼西亚", "Turkey": "土耳其", "Egypt": "埃及"
+                };
+                if (nameMap[countryName]) countryName = nameMap[countryName];
+                const count = countryCountMap.get(countryName) || 0;
+                let fillColor = '#88b574';
+                let fillOpacity = 0.5;
+                if (count >= 6) { fillColor = '#d97746'; fillOpacity = 0.75; }
+                else if (count >= 4) { fillColor = '#e09e5b'; fillOpacity = 0.7; }
+                else if (count >= 2) { fillColor = '#b8a75b'; fillOpacity = 0.65; }
+                else if (count === 1) { fillColor = '#9cbe88'; fillOpacity = 0.6; }
+                layer.setStyle({ fillColor: fillColor, fillOpacity: fillOpacity });
+            });
+        }
+
+        // ==================== 資料視覺化 Functions ====================
+
+        function calculateStats() {
+            const total = allRecords.length;
+            const countrySet = new Set(allRecords.map(r => r.countryName).filter(Boolean));
+            const doneCount = allRecords.filter(r => r.status === 'done').length;
+            return { total, countries: countrySet.size, done: doneCount };
+        }
+
+        function drawCategoryChart() {
+            const canvas = document.getElementById('categoryChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = 140 * dpr;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = '140px';
+            ctx.scale(dpr, dpr);
+
+            const categories = ['景点秘境', '美食探店', '避坑指南', '冷门技巧', '在地体验'];
+            const colors = ['#88a87d', '#e09e5b', '#d97746', '#6b8c5c', '#c9a96b'];
+            const counts = categories.map(cat => allRecords.filter(r => r.category === cat).length);
+            const maxCount = Math.max(...counts, 1);
+            const barWidth = (rect.width - 60) / categories.length;
+
+            ctx.clearRect(0, 0, rect.width, 140);
+
+            counts.forEach((count, i) => {
+                const x = 30 + i * barWidth;
+                const barH = (count / maxCount) * 90;
+                const y = 120 - barH;
+
+                // Bar
+                ctx.fillStyle = colors[i];
+                ctx.beginPath();
+                ctx.roundRect(x + 4, y, barWidth - 12, barH, [6, 6, 0, 0]);
+                ctx.fill();
+
+                // Count label
+                ctx.fillStyle = '#2b4b22';
+                ctx.font = 'bold 11px system-ui';
+                ctx.textAlign = 'center';
+                ctx.fillText(count, x + barWidth / 2, y - 6);
+
+                // Category label
+                ctx.fillStyle = '#5d523a';
+                ctx.font = '9px system-ui';
+                ctx.fillText(categories[i].replace('指南', ''), x + barWidth / 2, 135);
+            });
+        }
+
+        function drawRatingChart() {
+            const canvas = document.getElementById('ratingChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = 140 * dpr;
+            canvas.style.width = rect.width + 'px';
+            canvas.style.height = '140px';
+            ctx.scale(dpr, dpr);
+
+            const ratings = [1, 2, 3, 4, 5];
+            const colors = ['#d97746', '#e09e5b', '#c9a96b', '#9cbe88', '#558b4b'];
+            const counts = ratings.map(r => allRecords.filter(rec => rec.rating === r).length);
+            const maxCount = Math.max(...counts, 1);
+
+            ctx.clearRect(0, 0, rect.width, 140);
+            const centerX = rect.width / 2;
+            const centerY = 65;
+            const outerRadius = 50;
+            const innerRadius = 25;
+            let startAngle = -Math.PI / 2;
+
+            counts.forEach((count, i) => {
+                if (count === 0) return;
+                const sliceAngle = (count / allRecords.length) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, outerRadius, startAngle, startAngle + sliceAngle);
+                ctx.closePath();
+                ctx.fillStyle = colors[i];
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                startAngle += sliceAngle;
+            });
+
+            // Inner circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, innerRadius, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+
+            // Legend
+            const legendX = 15;
+            ratings.forEach((r, i) => {
+                const y = 10 + i * 22;
+                ctx.fillStyle = colors[i];
+                ctx.fillRect(legendX, y, 10, 10);
+                ctx.fillStyle = '#5d523a';
+                ctx.font = '9px system-ui';
+                ctx.textAlign = 'left';
+                ctx.fillText(`${r}星 (${counts[i]})`, legendX + 14, y + 9);
+            });
+        }
+
+        function drawTopCountries() {
+            const container = document.getElementById('countryBarList');
+            if (!container) return;
+
+            const countryMap = new Map();
+            allRecords.forEach(rec => {
+                if (rec.countryName) {
+                    countryMap.set(rec.countryName, (countryMap.get(rec.countryName) || 0) + 1);
+                }
+            });
+
+            const sorted = Array.from(countryMap.entries())
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 6);
+
+            if (sorted.length === 0) {
+                container.innerHTML = '<div style="text-align:center;color:#b9a889;font-size:0.8rem;">尚無數據</div>';
+                return;
+            }
+
+            const maxCount = sorted[0][1];
+            let html = '';
+            sorted.forEach(([country, count]) => {
+                const percent = Math.max((count / maxCount) * 100, 8);
+                html += `
+                <div class="country-bar-item">
+                    <span class="country-bar-label">${escapeHtml(country)}</span>
+                    <div class="country-bar-track">
+                        <div class="country-bar-fill" style="width:${percent}%"></div>
+                    </div>
+                    <span class="country-bar-count">${count}</span>
+                </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderDataVisualization() {
+            const stats = calculateStats();
+
+            // Update summary numbers
+            const statTotal = document.getElementById('statTotal');
+            const statCountries = document.getElementById('statCountries');
+            const statDone = document.getElementById('statDone');
+            if (statTotal) statTotal.textContent = stats.total;
+            if (statCountries) statCountries.textContent = stats.countries;
+            if (statDone) statDone.textContent = stats.done;
+
+            // Draw charts
+            drawCategoryChart();
+            drawRatingChart();
+            drawTopCountries();
+        }
+
+        // ==================== 地圖初始化 ====================
+
         async function initMap() {
-            map = L.map('worldMap').setView([20, 0], 2);
+            const southWest = L.latLng(-85, -180);
+            const northEast = L.latLng(85, 180);
+            const bounds = L.latLngBounds(southWest, northEast);
+
+            map = L.map('worldMap', {
+                center: [20, 0],
+                zoom: 2,
+                maxBounds: bounds,
+                maxBoundsViscosity: 0.8,
+                minZoom: 1.5,
+                maxZoom: 6,
+                worldCopyJump: false,
+                bounceAtZoomLimits: true
+            });
+
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> & CartoDB',
                 subdomains: 'abcd',
                 maxZoom: 6,
-                minZoom: 1.5
+                minZoom: 1.5,
+                noWrap: true,
+                bounds: bounds
             }).addTo(map);
 
             const geoJsonUrl =
@@ -893,47 +1409,78 @@
                         let countryName = feature.properties?.ADMIN || feature.properties?.name;
                         if (!countryName) countryName = feature.properties?.NAME || '未知地区';
                         const nameMap = {
-                            "United States": "美国",
-                            "China": "中国",
-                            "Japan": "日本",
-                            "India": "印度",
-                            "United Kingdom": "英国",
-                            "France": "法国",
-                            "Germany": "德国",
-                            "Italy": "意大利",
-                            "Spain": "西班牙",
-                            "Australia": "澳大利亚",
-                            "Canada": "加拿大",
-                            "Brazil": "巴西",
-                            "Russia": "俄罗斯",
-                            "Mexico": "墨西哥",
-                            "Thailand": "泰国",
-                            "Vietnam": "越南",
-                            "South Korea": "韩国",
-                            "Indonesia": "印度尼西亚",
-                            "Turkey": "土耳其",
-                            "Egypt": "埃及"
+                            "United States": "美国", "China": "中国", "Japan": "日本", "India": "印度",
+                            "United Kingdom": "英国", "France": "法国", "Germany": "德国", "Italy": "意大利",
+                            "Spain": "西班牙", "Australia": "澳大利亚", "Canada": "加拿大", "Brazil": "巴西",
+                            "Russia": "俄罗斯", "Mexico": "墨西哥", "Thailand": "泰国", "Vietnam": "越南",
+                            "South Korea": "韩国", "Indonesia": "印度尼西亚", "Turkey": "土耳其", "Egypt": "埃及",
+                            "Argentina": "阿根廷", "Chile": "智利", "Peru": "秘鲁", "Colombia": "哥伦比亚",
+                            "South Africa": "南非", "Nigeria": "尼日利亚", "Kenya": "肯尼亚", "Morocco": "摩洛哥",
+                            "Netherlands": "荷兰", "Belgium": "比利时", "Sweden": "瑞典", "Norway": "挪威",
+                            "Denmark": "丹麦", "Finland": "芬兰", "Portugal": "葡萄牙", "Greece": "希腊",
+                            "Poland": "波兰", "Ukraine": "乌克兰", "Czech Republic": "捷克", "Austria": "奥地利",
+                            "Switzerland": "瑞士", "Ireland": "爱尔兰", "New Zealand": "新西兰", "Philippines": "菲律宾",
+                            "Malaysia": "马来西亚", "Singapore": "新加坡", "United Arab Emirates": "阿联酋",
+                            "Saudi Arabia": "沙特阿拉伯", "Qatar": "卡塔尔", "Israel": "以色列", "Iran": "伊朗",
+                            "Pakistan": "巴基斯坦", "Bangladesh": "孟加拉国", "Sri Lanka": "斯里兰卡",
+                            "Nepal": "尼泊尔", "Myanmar": "缅甸", "Cambodia": "柬埔寨", "Laos": "老挝",
+                            "Mongolia": "蒙古", "Kazakhstan": "哈萨克斯坦", "Uzbekistan": "乌兹别克斯坦",
+                            "Croatia": "克罗地亚", "Romania": "罗马尼亚", "Hungary": "匈牙利", "Bulgaria": "保加利亚",
+                            "Iceland": "冰岛", "Costa Rica": "哥斯达黎加", "Panama": "巴拿马", "Cuba": "古巴",
+                            "Jamaica": "牙买加", "Dominican Republic": "多米尼加", "Ecuador": "厄瓜多尔",
+                            "Bolivia": "玻利维亚", "Paraguay": "巴拉圭", "Uruguay": "乌拉圭", "Venezuela": "委内瑞拉",
+                            "Algeria": "阿尔及利亚", "Tunisia": "突尼斯", "Ethiopia": "埃塞俄比亚", "Tanzania": "坦桑尼亚",
+                            "Ghana": "加纳", "Angola": "安哥拉", "Mozambique": "莫桑比克", "Madagascar": "马达加斯加",
+                            "Fiji": "斐济", "Papua New Guinea": "巴布亚新几内亚", "Iraq": "伊拉克", "Jordan": "约旦",
+                            "Lebanon": "黎巴嫩", "Oman": "阿曼", "Bahrain": "巴林", "Kuwait": "科威特",
+                            "Georgia": "格鲁吉亚", "Armenia": "亚美尼亚", "Azerbaijan": "阿塞拜疆", "Belarus": "白俄罗斯",
+                            "Slovakia": "斯洛伐克", "Slovenia": "斯洛文尼亚", "Lithuania": "立陶宛", "Latvia": "拉脱维亚",
+                            "Estonia": "爱沙尼亚", "Cyprus": "塞浦路斯", "Malta": "马耳他", "Luxembourg": "卢森堡",
+                            "Greenland": "格陵兰", "Puerto Rico": "波多黎各", "Bahamas": "巴哈马",
+                            "Belize": "伯利兹", "Guatemala": "危地马拉", "Honduras": "洪都拉斯", "El Salvador": "萨尔瓦多",
+                            "Nicaragua": "尼加拉瓜", "Haiti": "海地", "Trinidad and Tobago": "特立尼达和多巴哥",
+                            "Suriname": "苏里南", "Guyana": "圭亚那", "Senegal": "塞内加尔", "Mali": "马里",
+                            "Niger": "尼日尔", "Chad": "乍得", "Sudan": "苏丹", "South Sudan": "南苏丹",
+                            "Uganda": "乌干达", "Rwanda": "卢旺达", "Burundi": "布隆迪", "Zambia": "赞比亚",
+                            "Zimbabwe": "津巴布韦", "Botswana": "博茨瓦纳", "Namibia": "纳米比亚", "Malawi": "马拉维",
+                            "Lesotho": "莱索托", "Eswatini": "斯威士兰", "Mauritius": "毛里求斯", "Seychelles": "塞舌尔",
+                            "Comoros": "科摩罗", "Cabo Verde": "佛得角", "Sao Tome and Principe": "圣多美和普林西比",
+                            "Equatorial Guinea": "赤道几内亚", "Gabon": "加蓬", "Congo": "刚果", "DR Congo": "刚果民主共和国",
+                            "Central African Republic": "中非", "Cameroon": "喀麦隆", "Benin": "贝宁", "Togo": "多哥",
+                            "Burkina Faso": "布基纳法索", "Côte d'Ivoire": "科特迪瓦", "Liberia": "利比里亚",
+                            "Sierra Leone": "塞拉利昂", "Guinea": "几内亚", "Guinea-Bissau": "几内亚比绍",
+                            "Gambia": "冈比亚", "Mauritania": "毛里塔尼亚", "Western Sahara": "西撒哈拉",
+                            "Libya": "利比亚", "Somalia": "索马里", "Djibouti": "吉布提", "Eritrea": "厄立特里亚",
+                            "Yemen": "也门", "Syria": "叙利亚", "Palestine": "巴勒斯坦", "Afghanistan": "阿富汗",
+                            "Turkmenistan": "土库曼斯坦", "Kyrgyzstan": "吉尔吉斯斯坦", "Tajikistan": "塔吉克斯坦",
+                            "Bhutan": "不丹", "Maldives": "马尔代夫", "Brunei": "文莱", "Timor-Leste": "东帝汶",
+                            "Taiwan": "台湾", "Hong Kong": "香港", "Macau": "澳门", "North Korea": "朝鲜",
+                            "Moldova": "摩尔多瓦", "Bosnia and Herzegovina": "波黑", "Serbia": "塞尔维亚",
+                            "Montenegro": "黑山", "North Macedonia": "北马其顿", "Albania": "阿尔巴尼亚",
+                            "Kosovo": "科索沃", "Andorra": "安道尔", "Monaco": "摩纳哥", "Liechtenstein": "列支敦士登",
+                            "San Marino": "圣马力诺", "Vatican": "梵蒂冈"
                         };
                         if (nameMap[countryName]) countryName = nameMap[countryName];
 
                         layer.on('click', (e) => {
                             L.DomEvent.stopPropagation(e);
                             onCountryClick(countryName);
-                            layer.setStyle({ fillOpacity: 0.9, weight: 2, color: '#f5a623' });
+                            layer.setStyle({ fillOpacity: 0.9, weight: 2.5, color: '#f5a623' });
                             setTimeout(() => {
                                 geoJsonLayer.resetStyle(layer);
-                            }, 300);
+                                updateMapHeatmap();
+                            }, 350);
                         });
-                        layer.bindTooltip(countryName, { sticky: true, offset: [0, -5] });
+                        layer.bindTooltip(countryName, { sticky: true, offset: [0, -5], className: 'custom-tooltip' });
                     }
                 }).addTo(map);
+                updateMapHeatmap();
             } catch (err) {
                 console.warn("GeoJSON 載入失敗，使用基礎底圖", err);
                 map.setView([20, 0], 2);
             }
         }
 
-        // 綁定 UI 事件
         function bindUIEvents() {
             openAddBtn.addEventListener('click', openAddSuggestionModal);
             closeModalBtn.addEventListener('click', () => { modal.style.display = 'none'; });
@@ -947,17 +1494,23 @@
                     if (filterValue) setFilter(filterValue);
                 });
             });
+
+            // Redraw charts on window resize
+            window.addEventListener('resize', () => {
+                drawCategoryChart();
+                drawRatingChart();
+            });
         }
 
-        // 主入口
         async function init() {
-            await loadData(); // 優先從 Sheet 載入
+            await loadData();
             initMap();
             bindUIEvents();
             openAddBtn.disabled = true;
             selectedCountrySpan.innerText = '请点击国家';
             setFilter('all');
             renderList([]);
+            renderDataVisualization();
         }
 
         init();
